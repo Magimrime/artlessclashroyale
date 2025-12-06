@@ -795,9 +795,20 @@ class Main {
             ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = "black"; ctx.stroke();
 
-            // HP Bar (only if damaged)
-            if (e.hp < e.mhp) {
-                this.drawHealthBar(e.x, e.y - r - 5, e.hp, e.mhp);
+            // HP/Shield Bar
+            if (e.shield > 0) {
+                if (e.shield < e.maxShield) {
+                    this.drawHealthBar(e.x, e.y - r - 8, e.shield, e.maxShield, "#800080"); // Purple for Shield
+                } else {
+                    // Full shield, maybe don't draw or draw? Standard is hide if full.
+                    // But prompt says "extra healthbar".
+                    // Let's show it if it's not full, OR if HP is not full?
+                    // Usually hide if 100%.
+                }
+                // If Shield exists, we usually don't show HP bar underneath in CR unless broken.
+                // But let's follow the logic: "Shield" is the bar.
+            } else if (e.hp < e.mhp) {
+                this.drawHealthBar(e.x, e.y - r - 5, e.hp, e.mhp, "#00ff00");
             }
         }
 
@@ -823,12 +834,12 @@ class Main {
         if (e.isClone) ctx.globalAlpha = 1.0;
     }
 
-    drawHealthBar(x, y, hp, mhp) {
+    drawHealthBar(x, y, hp, mhp, color) {
         let w = 30;
         let h = 4;
         ctx.fillStyle = "black";
         ctx.fillRect(x - w / 2, y, w, h);
-        ctx.fillStyle = "#00ff00";
+        ctx.fillStyle = color || "#00ff00";
         ctx.fillRect(x - w / 2, y, w * (Math.max(0, hp) / mhp), h);
     }
 

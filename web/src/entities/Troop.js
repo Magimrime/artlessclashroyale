@@ -25,8 +25,12 @@ export default class Troop extends Entity {
         else if (["Giant", "Golem", "Elixir Golem", "Royal Giant", "Electro Giant"].includes(c.n) || c.t === 3) mass = 20;
         else if (c.n === "Elixir Golemite") mass = 10;
         else if (c.n === "Elixir Blob" || c.n === "Lava Pup") mass = 6;
+        else if (c.n === "Royal Recruits") mass = 15;
 
+        // Parent constructor calls this.hp = h, which invokes the setter.
+        // We need _hp to be set there.
         super(t, x, y, c.hp, mass, mass, c.fl, c.ar);
+
         this.c = c;
         this.cd = 0;
         this.jt = null;
@@ -63,8 +67,39 @@ export default class Troop extends Entity {
         this.distWalked = 0;
         this.isCharging = false;
 
+        // Shield Init
+        this.shield = 0;
+        this.maxShield = 0;
+        if (c.n === "Royal Recruits") {
+            this.shield = 199;
+            this.maxShield = 199;
+        }
+
         if (c.n === "Princess") this.sightRange = 400;
         if (c.n === "Prince") this.rad = 12;
+    }
+
+    get hp() {
+        return this._hp;
+    }
+
+    set hp(val) {
+        if (this._hp === undefined) {
+            this._hp = val;
+            return;
+        }
+        let dmg = this._hp - val;
+        if (dmg > 0 && this.shield > 0) {
+            // Damage to shield
+            if (dmg >= this.shield) {
+                this.shield = 0;
+            } else {
+                this.shield -= dmg;
+            }
+            // Health is protected (stays same)
+        } else {
+            this._hp = val;
+        }
     }
 
     act(g) {
