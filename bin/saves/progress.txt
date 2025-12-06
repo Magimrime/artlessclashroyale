@@ -1,0 +1,58 @@
+1
+3
+y
+Bats,Minion Horde,Mega Minion,Freeze,Graveyard,Goblins,Witch,Mother Witch
+n
+
+Knight
+Archers
+Giant
+Fireball
+Mini PEKKA
+Zap
+Skeletons
+Musketeer
+Cannon
+Mega Knight
+P.E.K.K.A
+Skeleton Army
+Barbarians
+Goblin Barrel
+Barbarian Barrel
+Vines
+Freeze
+Fire Spirit
+Ice Spirit
+Electro Spirit
+Heal Spirit
+Arrows
+Minions
+Goblins
+Spear Goblins
+Bats
+Poison
+Wizard
+Witch
+Graveyard
+Mega Minion
+Minion Horde
+Baby Dragon
+Inferno Dragon
+Inferno Tower
+Golem
+Lava Hound
+Elixir Golem
+Elite Barbarians
+Elixir Collector
+Zappies
+Sparky
+Mirror
+Clone
+Wall Breakers
+Royal Giant
+Electro Giant
+Bowler
+Hog Rider
+Royal Hogs
+Prince
+Mother Witch
