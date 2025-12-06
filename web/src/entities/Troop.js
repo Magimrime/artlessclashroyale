@@ -25,7 +25,7 @@ export default class Troop extends Entity {
         else if (["Giant", "Golem", "Elixir Golem", "Royal Giant", "Electro Giant"].includes(c.n) || c.t === 3) mass = 20;
         else if (c.n === "Elixir Golemite") mass = 10;
         else if (c.n === "Elixir Blob" || c.n === "Lava Pup") mass = 6;
-        else if (c.n === "Royal Recruits") mass = 15;
+        else if (c.n === "Royal Recruits") mass = 12;
 
         // Parent constructor calls this.hp = h, which invokes the setter.
         // We need _hp to be set there.

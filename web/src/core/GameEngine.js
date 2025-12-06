@@ -88,9 +88,8 @@ export default class GameEngine {
             new Card("Royal Hogs", 5, 695, 68, 2.0, 20, 1, 150, 60, 120, false, false),
             new Card("Prince", 5, 1615, 325, 1.2, 20, 0, 120, 60, 150, false, false),
             new Card("Mother Witch", 4, 532, 133, 1.2, 110, 0, 10, 72, 150, false, true),
-            new Card("Mother Witch", 4, 532, 133, 1.2, 110, 0, 10, 72, 150, false, true),
             new Card("The Log", 2, 0, 268, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Royal Recruits", 7, 440, 110, 1.5, 18, 0, 15, 78, 150, false, false)
+            new Card("Royal Recruits", 7, 440, 110, 1.5, 23, 0, 20, 78, 150, false, false)
         ];
 
         // Apply Stat Adjustments
@@ -398,13 +397,6 @@ export default class GameEngine {
                 clone.hp = 1;
                 clone.mhp = 1;
                 clone.isClone = true;
-                // Fix for shielded units:
-                // If the original had a shield mechanism (maxShield > 0), the clone gets 1 Shield HP.
-                // We set shield AFTER hp because setting hp=1 might have broken the initial shield.
-                if (clone.maxShield > 0) {
-                    clone.shield = 1;
-                    clone.maxShield = 1;
-                }
                 this.ents.push(clone);
             }
         } else if (c.t === 2) {
