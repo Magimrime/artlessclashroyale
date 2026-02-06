@@ -559,7 +559,8 @@ class Main {
                 }
                 if (e.c.n === "Electro Giant") {
                     ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
-                    let r = e.rad + 10;
+                    // Match the logical radius: (rad + 10) * 2.0 approx
+                    let r = (e.rad + 10) * 2.0;
                     ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
                     ctx.lineWidth = 1;

@@ -134,11 +134,11 @@ export default class Troop extends Entity {
 
         // Electro Giant Aura
         if (this.c.n === "Electro Giant") {
-            if (g.aiTick % 30 === 0) {
+            // User requested 5x slower aura cooldown. Base was 30, so 30 * 5 = 150.
+            if (g.aiTick % 150 === 0) {
                 for (let e of g.ents) {
-                    // Original radius was rad + 10 + e.rad.
-                    // User asked for "2x larger again" (previous was 2x), so 4x total.
-                    if (e.tm !== this.tm && this.dist(e) < (this.rad + 10 + e.rad) * 4.0) {
+                    // User requested 2x larger aura (reverting from 4x).
+                    if (e.tm !== this.tm && this.dist(e) < (this.rad + 10 + e.rad) * 2.0) {
                         e.hp -= 50;
                         e.st = 10;
                     }

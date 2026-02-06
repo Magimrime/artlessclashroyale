@@ -82,7 +82,7 @@ export default class GameEngine {
             new Card("Clone", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Wall Breakers", 2, 140, 560, 2.0, 12, 1, 4, 60, 150, false, false),
             new Card("Royal Giant", 6, 1600, 390, 0.8, 120, 1, 500, 102, 200, false, false),
-            new Card("Electro Giant", 7, 2000, 150, 0.8, 20, 1, 750, 90, 150, false, false),
+            new Card("Electro Giant", 7, 2000, 150, 0.8, 20, 1, 150, 90, 150, false, false),
             new Card("Bowler", 5, 1600, 200, 0.8, 100, 0, 180, 150, 150, false, false),
             new Card("Hog Rider", 4, 1408, 264, 2.0, 20, 1, 300, 60, 150, false, false),
             new Card("Royal Hogs", 5, 695, 68, 2.0, 20, 1, 150, 60, 120, false, false),
