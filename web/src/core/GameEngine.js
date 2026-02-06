@@ -82,13 +82,14 @@ export default class GameEngine {
             new Card("Clone", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Wall Breakers", 2, 140, 560, 2.0, 12, 1, 4, 60, 150, false, false),
             new Card("Royal Giant", 6, 1600, 390, 0.8, 120, 1, 500, 102, 200, false, false),
-            new Card("Electro Giant", 7, 2000, 150, 0.8, 20, 1, 500, 90, 150, false, false),
+            new Card("Electro Giant", 7, 2000, 150, 0.8, 20, 1, 750, 90, 150, false, false),
             new Card("Bowler", 5, 1600, 200, 0.8, 100, 0, 180, 150, 150, false, false),
             new Card("Hog Rider", 4, 1408, 264, 2.0, 20, 1, 300, 60, 150, false, false),
             new Card("Royal Hogs", 5, 695, 68, 2.0, 20, 1, 150, 60, 120, false, false),
             new Card("Prince", 5, 1615, 325, 1.2, 20, 0, 120, 60, 150, false, false),
             new Card("Mother Witch", 4, 532, 133, 1.2, 110, 0, 10, 72, 150, false, true),
             new Card("The Log", 2, 0, 268, 0, 0, 2, 0, 0, 0, false, true),
+            new Card("Barbarian Barrel", 2, 0, 200, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Royal Recruits", 7, 440, 110, 1.5, 23, 0, 20, 78, 150, false, false)
         ];
 
@@ -276,8 +277,8 @@ export default class GameEngine {
     }
 
     isValid(y, x, c) {
-        if (c.n === "The Log") {
-            // Log must be placed on player's side (roughly)
+        if (c.n === "The Log" || c.n === "Barbarian Barrel") {
+            // Log/BarbBarrel must be placed on player's side (roughly)
             if (y < this.RIV_Y + 40) return false;
             return true;
         }
@@ -378,7 +379,13 @@ export default class GameEngine {
             // Speed: 2.5x slower than 10 => 4.
             let dist = 303;
             let ty = (tm === 0) ? y - dist : y + dist;
-            let p = new Proj(x, y, x, ty, null, 4, false, 60, Math.floor(c.d * 0.8), tm, false).asLog();
+            let p = new Proj(x, y, x, ty, null, 2.66, false, 60, Math.floor(c.d * 0.8), tm, false).asLog();
+            this.projs.push(p);
+        } else if (c.n === "Barbarian Barrel") {
+            // 3x shorter than log (303 / 3 = 101)
+            let dist = 101;
+            let ty = (tm === 0) ? y - dist : y + dist;
+            let p = new Proj(x, y, x, ty, null, 2.66, false, 60, Math.floor(c.d), tm, false).asBarbBarrelLog();
             this.projs.push(p);
         } else if (c.n === "Clone") {
             let p = new Proj(x, y, x, y, null, 0, true, 90, 0, tm, false);

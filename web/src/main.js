@@ -516,7 +516,7 @@ class Main {
                 if (p.isLog) {
                     ctx.fillStyle = "#8b4513"; // Brown
                     // Render as rectangle
-                    let w = 70;
+                    let w = p.barbBarrelLog ? 44 : 70;
                     let h = 20;
                     ctx.fillRect(p.x - w / 2, p.y - h / 2, w, h);
                     // ctx.strokeStyle = "black";

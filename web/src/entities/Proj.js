@@ -65,6 +65,7 @@ export default class Proj {
     asRolling() { this.isRolling = true; this.life = 60; return this; }
 
     asLog() { this.isLog = true; this.asRolling(); return this; }
+    asBarbBarrelLog() { this.isLog = true; this.barbBarrelLog = true; this.asRolling(); return this; }
 
     upd(g) {
         if (this.chainTargets || this.barbBreak) {
@@ -174,10 +175,9 @@ export default class Proj {
                     if (this.isLog) {
                         // Rectangular collision
                         // Log width ~60 (was 120), Depth ~20 (was 40)
-                        let w = 70;
+                        let w = this.barbBarrelLog ? 44 : 70;
                         let h = 20;
                         // Simple AABB check since log moves vertically mostly
-                        // For more precision we could rotate the rect but vertical movement is dominant
                         if (Math.abs(this.x - e.x) < w / 2 + e.rad && Math.abs(this.y - e.y) < h / 2 + e.rad) {
                             hit = true;
                         }
@@ -189,7 +189,7 @@ export default class Proj {
                     if (hit) {
                         e.hp -= this.dmg;
                         this.hitEntities.push(e);
-                        if (e.mass <= 300 && !(e instanceof Tower) && !(e instanceof Building)) {
+                        if (!this.barbBarrelLog && e.mass <= 300 && !(e instanceof Tower) && !(e instanceof Building)) {
                             if (e instanceof Troop) {
                                 e.kbTime = 10;
                                 let kbSpeed = 6.0 * (1.0 - (e.mass / 350.0));
@@ -203,6 +203,10 @@ export default class Proj {
 
             if (Math.hypot(this.tx - this.x, this.ty - this.y) < this.spd || this.life <= 0) {
                 this.life = 0;
+                if (this.barbBarrelLog) {
+                    let barb = g.getCard("Barbarians");
+                    g.ents.push(new Troop(this.tm, this.x, this.y, barb));
+                }
             }
             return;
         }
