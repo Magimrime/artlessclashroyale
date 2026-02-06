@@ -498,6 +498,8 @@ class Main {
                 ctx.fillStyle = "rgba(0, 255, 0, 0.6)";
             } else if (p.redArea) {
                 ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
+            } else if (p.brownArea) {
+                ctx.fillStyle = "rgba(139, 69, 19, 0.6)";
             } else if (p.poison) {
                 ctx.fillStyle = "rgba(0, 128, 0, 0.4)";
                 let size = p.rad;
@@ -528,7 +530,7 @@ class Main {
 
             if (!p.fireArea && !p.poison && !p.graveyard) {
                 let size = p.rad * 2;
-                if (!p.spl && !p.barrel && !p.redArea && !p.isHeal && !p.barbBreak && !p.isRolling) size = 8;
+                if (!p.spl && !p.barrel && !p.redArea && !p.brownArea && !p.isHeal && !p.barbBreak && !p.isRolling) size = 8;
                 ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
             }
 

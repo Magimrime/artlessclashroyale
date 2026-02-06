@@ -269,61 +269,8 @@ export default class Troop extends Entity {
             }
         }
 
-        // 1. Distraction Check
-        let distraction = null;
-        let minDist = this.sightRange;
-
-        for (let e of g.ents) {
-            if (e.tm !== this.tm && e.hp > 0) {
-                let isBldg = e.constructor.name === "Tower" || e.constructor.name === "Building";
-                if (this.c.t === 1 && !isBldg) continue;
-                if (e.fly && !this.air && !this.c.ar) continue;
-
-                let d = this.dist(e);
-                if (d < minDist) {
-                    minDist = d;
-                    distraction = e;
-                }
-            }
-        }
-
-        // 2. Target Selection
-        let primaryTarget = null;
-        if (this.tm === 0) {
-            if (g.t2L.hp > 0 && this.x < W / 2) primaryTarget = g.t2L;
-            else if (g.t2R.hp > 0 && this.x >= W / 2) primaryTarget = g.t2R;
-            else primaryTarget = g.t2K;
-        } else {
-            if (g.t1L.hp > 0 && this.x < W / 2) primaryTarget = g.t1L;
-            else if (g.t1R.hp > 0 && this.x >= W / 2) primaryTarget = g.t1R;
-            else primaryTarget = g.t1K;
-        }
-
-        let newTarget = primaryTarget;
-        if (distraction) {
-            // Only switch to distraction if path is NOT blocked by friendly building
-            // We pass the distraction's position. checkPathBlocked returns true if BLOCKED.
-            if (!this.checkPathBlocked(g, this.x, this.y, distraction.x, distraction.y)) {
-                newTarget = distraction;
-            }
-        }
-
-        if (!this.currentTarget || this.currentTarget.hp <= 0 || (this.currentTarget.rad === 0 && this.currentTarget !== primaryTarget)) {
-            this.currentTarget = newTarget;
-            this.currentWaypoint = null;
-        } else {
-            if (distraction && distraction !== this.currentTarget) {
-                this.currentTarget = distraction;
-                this.currentWaypoint = null;
-            } else if (this.currentTarget === distraction) {
-                // Keep
-            } else {
-                if (primaryTarget !== this.currentTarget && !distraction) {
-                    this.currentTarget = primaryTarget;
-                    this.currentWaypoint = null;
-                }
-            }
-        }
+        // 1 & 2. Find Target
+        this.findTarget(g);
 
         // Bridge Logic
         if (!this.fly && this.currentTarget) {
@@ -670,6 +617,66 @@ export default class Troop extends Entity {
             }
         }
         return obstacle;
+    }
+
+    findTarget(g) {
+        // 1. Distraction Check
+        let distraction = null;
+        let minDist = this.sightRange;
+
+        for (let e of g.ents) {
+            if (e.tm !== this.tm && e.hp > 0) {
+                let isBldg = e.constructor.name === "Tower" || e.constructor.name === "Building";
+                if (this.c.t === 1 && !isBldg) continue;
+                // Fix: Check if target is flying and if I can attack air.
+                // this.air (from c.ar) dictates if I can attack air.
+                // If target flies (e.fly) and I CANNOT attack air (!this.air), skip.
+                if (e.fly && !this.air) continue;
+
+                let d = this.dist(e);
+                if (d < minDist) {
+                    minDist = d;
+                    distraction = e;
+                }
+            }
+        }
+
+        // 2. Primary Target Selection (Tower)
+        let primaryTarget = null;
+        if (this.tm === 0) {
+            if (g.t2L.hp > 0 && this.x < W / 2) primaryTarget = g.t2L;
+            else if (g.t2R.hp > 0 && this.x >= W / 2) primaryTarget = g.t2R;
+            else primaryTarget = g.t2K;
+        } else {
+            if (g.t1L.hp > 0 && this.x < W / 2) primaryTarget = g.t1L;
+            else if (g.t1R.hp > 0 && this.x >= W / 2) primaryTarget = g.t1R;
+            else primaryTarget = g.t1K;
+        }
+
+        let newTarget = primaryTarget;
+        if (distraction) {
+            // Only switch to distraction if path is NOT blocked by friendly building
+            if (!this.checkPathBlocked(g, this.x, this.y, distraction.x, distraction.y)) {
+                newTarget = distraction;
+            }
+        }
+
+        if (!this.currentTarget || this.currentTarget.hp <= 0 || (this.currentTarget.rad === 0 && this.currentTarget !== primaryTarget)) {
+            this.currentTarget = newTarget;
+            this.currentWaypoint = null;
+        } else {
+            if (distraction && distraction !== this.currentTarget) {
+                this.currentTarget = distraction;
+                this.currentWaypoint = null;
+            } else if (this.currentTarget === distraction) {
+                // Keep
+            } else {
+                if (primaryTarget !== this.currentTarget && !distraction) {
+                    this.currentTarget = primaryTarget;
+                    this.currentWaypoint = null;
+                }
+            }
+        }
     }
 
     ptSegDist(x1, y1, x2, y2, px, py) {

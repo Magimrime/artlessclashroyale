@@ -50,7 +50,7 @@ export default class GameEngine {
             new Card("Skeleton Army", 3, 5, 40, 2.0, 6, 0, 2, 10, 150, false, false),
             new Card("Barbarians", 5, 600, 150, 1.2, 18, 0, 10, 90, 180, false, false),
             new Card("Goblin Barrel", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, false),
-            new Card("Barbarian Barrel", 2, 0, 0, 0, 0, 2, 0, 0, 0, false, false),
+            new Card("Royale Delivery", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Vines", 2, 0, 20, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Freeze", 4, 0, 5, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Fire Spirit", 1, 90, 0, 2.0, 12, 0, 2, 10, 150, false, true),
@@ -61,16 +61,16 @@ export default class GameEngine {
             new Card("Minions", 3, 190, 50, 2.0, 12, 0, 3, 40, 150, true, true),
             new Card("Goblins", 2, 90, 100, 2.5, 12, 0, 2, 60, 150, false, false),
             new Card("Spear Goblins", 2, 110, 50, 2.5, 90, 0, 2, 50, 180, false, true),
-            new Card("Bats", 2, 67, 67, 2.5, 10, 0, 2, 60, 150, true, false),
-            new Card("Poison", 4, 0, 600, 0, 200, 2, 0, 0, 0, false, true),
+            new Card("Bats", 2, 67, 67, 2.5, 10, 0, 2, 60, 150, true, true),
+            new Card("Poison", 4, 0, 3000, 0, 200, 2, 0, 0, 0, false, true),
             new Card("Wizard", 5, 598, 230, 1.5, 100, 0, 10, 84, 220, false, true),
             new Card("Witch", 5, 696, 111, 1.5, 100, 0, 10, 42, 220, false, true),
             new Card("Graveyard", 5, 0, 0, 0, 33, 2, 0, 0, 0, false, true),
-            new Card("Mega Minion", 3, 700, 250, 1.6, 20, 0, 200, 60, 150, true, false),
+            new Card("Mega Minion", 3, 700, 250, 1.6, 20, 0, 200, 60, 150, true, true),
             new Card("Minion Horde", 5, 190, 50, 2.0, 12, 0, 6, 40, 150, true, true),
             new Card("Baby Dragon", 4, 1000, 130, 1.5, 80, 0, 10, 80, 180, true, true),
             new Card("Inferno Dragon", 4, 1070, 1, 1.5, 50, 0, 4, 1, 150, true, true),
-            new Card("Inferno Tower", 5, 1400, 1, 0.4, 120, 3, 30 * 60, 1, 120, false, false),
+            new Card("Inferno Tower", 5, 1400, 1, 0.4, 120, 3, 30 * 60, 1, 120, false, true),
             new Card("Golem", 8, 5120, 312, 0.8, 25, 1, 1000, 150, 200, false, false),
             new Card("Lava Hound", 7, 3581, 53, 0.8, 100, 1, 4000, 78, 180, true, false),
             new Card("Elixir Golem", 3, 1569, 253, 0.66, 25, 1, 4000, 117, 200, false, false),
@@ -363,12 +363,12 @@ export default class GameEngine {
     addU(tm, c, x, y) {
         if (c.n === "Goblin Barrel") {
             this.projs.push(new Proj(tm === 0 ? this.W / 2 : this.W / 2, tm === 0 ? this.H : 0, x, y, null, 15, false, 10, 0, tm, true));
-        } else if (c.n === "Barbarian Barrel") {
-            this.projs.push(new Proj(x, y, x, y, null, 0, false, 60, 50, tm, false).asRedArea());
-            let barb = new Card("Barbarians", 0, 600, 150, 1.2, 18, 0, 10, 90, 180, false, false);
-            this.ents.push(new Troop(tm, x, y, barb));
+        } else if (c.n === "Royale Delivery") {
+            this.projs.push(new Proj(x, y, x, y, null, 0, false, 60, 50, tm, false).asBrownArea());
+            let recruit = this.getCard("Royal Recruits");
+            this.ents.push(new Troop(tm, x, y, recruit));
         } else if (c.n === "Poison") {
-            this.projs.push(new Proj(x, y, x, y, null, 0, true, 200, 5, tm, false).asPoison());
+            this.projs.push(new Proj(x, y, x, y, null, 0, true, 200, 25, tm, false).asPoison());
         } else if (c.n === "Graveyard") {
             this.projs.push(new Proj(x, y, x, y, null, 0, true, 200, 0, tm, false).asGraveyard());
         } else if (c.n === "Graveyard") {
@@ -397,6 +397,10 @@ export default class GameEngine {
                 clone.hp = 1;
                 clone.mhp = 1;
                 clone.isClone = true;
+                if (t.c.n === "Royal Recruits") {
+                    clone.shield = 1;
+                    clone.maxShield = 1;
+                }
                 this.ents.push(clone);
             }
         } else if (c.t === 2) {

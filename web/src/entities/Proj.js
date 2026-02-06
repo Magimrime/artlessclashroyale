@@ -27,6 +27,7 @@ export default class Proj {
         this.barbBreak = false;
         this.fireArea = false;
         this.redArea = false;
+        this.brownArea = false;
         this.poison = false;
         this.graveyard = false;
         this.delayedSplash = false;
@@ -56,6 +57,7 @@ export default class Proj {
     asBarbBreak() { this.barbBreak = true; this.life = 6; return this; }
     asFireArea() { this.fireArea = true; this.life = 6; return this; }
     asRedArea() { this.redArea = true; this.life = 12; return this; }
+    asBrownArea() { this.brownArea = true; this.life = 12; return this; }
     asPoison() { this.poison = true; this.life = 240; return this; }
     asGraveyard() { this.graveyard = true; this.life = 300; return this; }
     asStun(duration = 30) { this.shouldStun = true; this.stunDuration = duration; return this; }
@@ -92,7 +94,7 @@ export default class Proj {
             return;
         }
 
-        if (this.spl || this.fireArea || this.redArea) {
+        if (this.spl || this.fireArea || this.redArea || this.brownArea) {
             if (this.isHeal) {
                 this.life--;
                 if (this.life === 5) {
@@ -110,9 +112,9 @@ export default class Proj {
                 return;
             }
 
-            if (this.fireArea || this.redArea) {
+            if (this.fireArea || this.redArea || this.brownArea) {
                 this.life--;
-                if (this.life === (this.redArea ? 11 : 5)) {
+                if (this.life === ((this.redArea || this.brownArea) ? 11 : 5)) {
                     for (let e of g.ents) {
                         if (e.tm !== this.tm && Math.hypot(this.x - e.x, this.y - e.y) < this.rad + e.rad) {
                             e.hp -= this.dmg;
