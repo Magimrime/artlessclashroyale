@@ -164,9 +164,11 @@ class Main {
                 }
             } else if (this.contains(this.deckBtn, x, y)) {
                 this.state = State.DECK;
-            } else if (this.cheatOptionVisible && x > W - 53 && y < 26) {
+            } else if (!this.eng.cheatPressed && x > W - 53 && y < 26) {
+                this.eng.cheatPressed = true;
+                this.eng.saveProgress();
                 this.state = State.CHEAT;
-            } else if (this.eng.cheated && this.contains(this.debugBtn, x, y)) {
+            } else if (this.eng.cheated && x > W - 53 && y < 26) {
                 this.state = State.DEBUG_MENU;
             }
         } else if (this.state === State.CHEAT) {
@@ -322,7 +324,7 @@ class Main {
             this.drawCenteredString(`Cards Unlocked: ${this.eng.unlockedCards.length}/${this.eng.allCards.length}`, W / 2, H - 150 - 120, "italic 14px Arial", "lightgray");
             this.drawCenteredString(`Wins: ${this.eng.gamesWon} | Matches: ${this.eng.gamesPlayed}`, W / 2, H - 130 - 120, "italic 14px Arial", "lightgray");
 
-            if (this.cheatOptionVisible) {
+            if (!this.eng.cheatPressed) {
                 ctx.fillStyle = "rgba(255,255,255,0.2)";
                 ctx.font = "10px Arial";
                 ctx.fillText("cheat", W - 43, 16);

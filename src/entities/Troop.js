@@ -403,7 +403,8 @@ export default class Troop extends Entity {
                     let dmg = this.c.d;
                     if (this.c.n === "Prince") dmg = Math.floor(dmg * 0.3);
                     if (this.isCharging) {
-                        dmg *= 2;
+                        if (this.c.n === "Knight") dmg = Math.floor(dmg * 1.5);
+                        else dmg *= 2;
                         this.isCharging = false;
                         this.distWalked = 0;
                     }
@@ -521,7 +522,7 @@ export default class Troop extends Entity {
                 this.y += dy * this.c.s * (this.isCharging ? 2.0 : 1.0);
             }
 
-            if (this.c.n === "Prince") {
+            if (this.c.n === "Prince" || this.c.n === "Knight") {
                 this.distWalked += Math.hypot(dx * this.c.s, dy * this.c.s);
                 if (this.distWalked > 20) this.isCharging = true;
             }

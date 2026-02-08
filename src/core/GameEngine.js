@@ -161,6 +161,7 @@ export default class GameEngine {
             gamesWon: this.gamesWon,
             gamesPlayed: this.gamesPlayed,
             cheated: this.cheated,
+            cheatPressed: this.cheatPressed,
             myDeck: this.myDeck.map(c => c.n),
             debugView: this.debugView,
             enemyDeckSelection: this.enemyDeckSelection.map(c => c.n),
@@ -204,6 +205,7 @@ export default class GameEngine {
         this.gamesWon = data.gamesWon || 0;
         this.gamesPlayed = data.gamesPlayed || 0;
         this.cheated = data.cheated || false;
+        this.cheatPressed = data.cheatPressed || false; // New field
         this.debugView = data.debugView || false;
 
         this.myDeck = [];
