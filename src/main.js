@@ -326,8 +326,7 @@ class Main {
                 ctx.fillStyle = "rgba(255,255,255,0.2)";
                 ctx.font = "10px Arial";
                 ctx.fillText("cheat", W - 43, 16);
-            }
-            if (this.eng.cheated) {
+            } else if (this.eng.cheated) {
                 ctx.fillStyle = "rgba(255,255,255,0.2)";
                 ctx.font = "10px Arial";
                 ctx.fillText("debug", W - 49, 16);

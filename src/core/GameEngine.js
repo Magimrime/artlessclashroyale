@@ -166,58 +166,83 @@ export default class GameEngine {
             enemyDeckSelection: this.enemyDeckSelection.map(c => c.n),
             unlockedCards: this.unlockedCards.map(c => c.n)
         };
-        localStorage.setItem('clash_royale_save', JSON.stringify(data));
+        const json = JSON.stringify(data, null, 4);
+        localStorage.setItem('clash_royale_save', json);
+
+        // Sync to bin/save.json via server
+        fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: json
+        }).catch(err => console.warn("Failed to sync save to server:", err));
     }
 
     loadProgress() {
-        let json = localStorage.getItem('clash_royale_save');
-        if (!json) return;
-        try {
-            let data = JSON.parse(json);
-            this.gamesWon = data.gamesWon || 0;
-            this.gamesPlayed = data.gamesPlayed || 0;
-            this.cheated = data.cheated || false;
-            this.debugView = data.debugView || false;
-
-            this.myDeck = [];
-            if (data.myDeck) {
-                data.myDeck.forEach(n => {
-                    let c = this.getCard(n);
-                    if (c) this.myDeck.push(c);
-                });
-            }
-
-            this.enemyDeckSelection = [];
-            if (data.enemyDeckSelection) {
-                data.enemyDeckSelection.forEach(n => {
-                    let c = this.getCard(n);
-                    if (c) this.enemyDeckSelection.push(c);
-                });
-            }
-
-            this.unlockedCards = [];
-            if (data.unlockedCards) {
-                data.unlockedCards.forEach(n => {
-                    let c = this.getCard(n);
-                    if (c && !this.unlockedCards.includes(c)) this.unlockedCards.push(c);
-                });
-            }
-
-            // Sanity check
-            this.myDeck.forEach(c => {
-                if (!this.unlockedCards.includes(c)) this.unlockedCards.push(c);
+        // Try to load from server first, then fallback to local storage
+        fetch('/api/load')
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error("No server save");
+            })
+            .then(data => {
+                this.applySaveData(data);
+            })
+            .catch(() => {
+                // Fallback to localStorage
+                let json = localStorage.getItem('clash_royale_save');
+                if (json) {
+                    try {
+                        this.applySaveData(JSON.parse(json));
+                    } catch (e) {
+                        console.error("Failed to load local save", e);
+                    }
+                }
             });
-        } catch (e) {
-            console.error("Failed to load save", e);
+    }
+
+    applySaveData(data) {
+        this.gamesWon = data.gamesWon || 0;
+        this.gamesPlayed = data.gamesPlayed || 0;
+        this.cheated = data.cheated || false;
+        this.debugView = data.debugView || false;
+
+        this.myDeck = [];
+        if (data.myDeck) {
+            data.myDeck.forEach(n => {
+                let c = this.getCard(n);
+                if (c) this.myDeck.push(c);
+            });
         }
+
+        this.enemyDeckSelection = [];
+        if (data.enemyDeckSelection) {
+            data.enemyDeckSelection.forEach(n => {
+                let c = this.getCard(n);
+                if (c) this.enemyDeckSelection.push(c);
+            });
+        }
+
+        this.unlockedCards = [];
+        if (data.unlockedCards) {
+            data.unlockedCards.forEach(n => {
+                let c = this.getCard(n);
+                if (c && !this.unlockedCards.includes(c)) this.unlockedCards.push(c);
+            });
+        }
+
+        // Sanity check
+        this.myDeck.forEach(c => {
+            if (!this.unlockedCards.includes(c)) this.unlockedCards.push(c);
+        });
     }
 
     deleteProgress() {
         localStorage.removeItem('clash_royale_save');
+        fetch('/api/delete', { method: 'POST' }).catch(err => console.warn("Failed to delete server save:", err));
     }
 
     hasSaveFile() {
-        return localStorage.getItem('clash_royale_save') !== null;
+        return localStorage.getItem('clash_royale_save') !== null; // Visual check uses local, async load handles server
     }
 
     reset() {
