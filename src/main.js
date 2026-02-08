@@ -293,48 +293,48 @@ class Main {
         ctx.fillRect(0, 0, W, H);
 
         if (this.state === State.RESUME_PROMPT) {
-            ctx.fillStyle = '#1e1e50';
+            ctx.fillStyle = '#A5D6A7';
             ctx.fillRect(0, 0, W, H);
-            this.drawCenteredString("Resume previous game?", W / 2, H / 2 - 75, "bold 30px Arial", "white");
-            this.drawBtn(this.resumeYesBtn, "YES", "green");
-            this.drawBtn(this.resumeNoBtn, "NO", "red");
+            this.drawCenteredString("Resume previous game?", W / 2, H / 2 - 75, "bold 30px Arial", "#004000");
+            this.drawBtn(this.resumeYesBtn, "YES", "#32CD32");
+            this.drawBtn(this.resumeNoBtn, "NO", "#FF6347");
             return;
         }
 
         if (this.state === State.TITLE) {
-            ctx.fillStyle = '#1e1e50';
+            ctx.fillStyle = '#A5D6A7';
             ctx.fillRect(0, 0, W, H);
 
-            // Draw Visitor Count (Title Screen Only, No Background)
-            ctx.fillStyle = "white";
+            // Draw Visitor Count
+            ctx.fillStyle = "#006400";
             ctx.font = "bold 12px Arial";
             ctx.textAlign = "left";
             ctx.fillText(`${this.visitorCount}`, 10, 20);
             ctx.textAlign = "center";
 
-            this.drawCenteredString("Clash Clone", W / 2, H / 2 - 50 - 120, "bold 40px Arial", "white");
+            this.drawCenteredString("Clash Clone", W / 2, H / 2 - 50 - 120, "bold 40px Arial", "#006400");
 
             let validDeck = this.eng.myDeck.length === 8;
-            this.drawBtn(this.playBtn, "PLAY", validDeck ? "green" : "gray");
+            this.drawBtn(this.playBtn, "PLAY", validDeck ? "#32CD32" : "gray");
             if (!validDeck) {
                 this.drawCenteredString("Build a deck of 8 cards!", W / 2, this.playBtn.y - 10, "12px Arial", "red");
             }
-            this.drawBtn(this.deckBtn, "DECK", "orange");
+            this.drawBtn(this.deckBtn, "DECK", "#FFA500");
 
-            this.drawCenteredString(`Cards Unlocked: ${this.eng.unlockedCards.length}/${this.eng.allCards.length}`, W / 2, H - 150 - 120, "italic 14px Arial", "lightgray");
-            this.drawCenteredString(`Wins: ${this.eng.gamesWon} | Matches: ${this.eng.gamesPlayed}`, W / 2, H - 130 - 120, "italic 14px Arial", "lightgray");
+            this.drawCenteredString(`Cards Unlocked: ${this.eng.unlockedCards.length}/${this.eng.allCards.length}`, W / 2, H - 150 - 120, "italic 14px Arial", "#2E8B57");
+            this.drawCenteredString(`Wins: ${this.eng.gamesWon} | Matches: ${this.eng.gamesPlayed}`, W / 2, H - 130 - 120, "italic 14px Arial", "#2E8B57");
 
             if (!this.eng.cheatPressed) {
-                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.fillStyle = "rgba(0,100,0,0.5)";
                 ctx.font = "10px Arial";
                 ctx.fillText("cheat", W - 43, 16);
             } else if (this.eng.cheated) {
-                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.fillStyle = "rgba(0,100,0,0.5)";
                 ctx.font = "10px Arial";
                 ctx.fillText("debug", W - 49, 16);
             }
 
-            this.drawCenteredString("by Oliver Zhou", W / 2, H - 20, "10px Arial", "rgba(255, 255, 255, 0.5)");
+            this.drawCenteredString("by Oliver Zhou", W / 2, H - 20, "10px Arial", "rgba(0, 100, 0, 0.5)");
             return;
         }
 
@@ -348,7 +348,7 @@ class Main {
         }
 
         if (this.state === State.DECK) {
-            ctx.fillStyle = "#282828";
+            ctx.fillStyle = "#e0f0e0";
             ctx.fillRect(0, 0, W, H);
             let cols = 3;
             let margin = 20;
@@ -364,35 +364,33 @@ class Main {
                 let cy = 100 + row * (cardH + margin) - this.scrollY;
                 if (cy > H || cy + cardH < 0) continue;
 
-                ctx.fillStyle = selected ? "#00c800" : "#646464";
-                ctx.fillRect(cx, cy, cardW, cardH);
-                ctx.strokeStyle = "black";
-                ctx.strokeRect(cx, cy, cardW, cardH);
+                ctx.fillStyle = selected ? "#32CD32" : "#A9A9A9";
+                this.drawRoundRect(cx, cy, cardW, cardH, 10, true, true);
                 this.drawCenteredString(c.n, cx + cardW / 2, cy + cardH / 2, "bold 11px Arial", "white");
                 this.drawElixirCost(cx - 5, cy - 5, c.c);
             }
 
-            ctx.fillStyle = "#282828";
+            ctx.fillStyle = "#81C784";
             ctx.fillRect(0, 0, W, 90);
-            this.drawCenteredString(`Build Deck (${this.eng.myDeck.length}/8)`, W / 2, 50, "bold 30px Arial", "white");
+            this.drawCenteredString(`Build Deck (${this.eng.myDeck.length}/8)`, W / 2, 50, "bold 30px Arial", "#006400");
 
             let sum = this.eng.myDeck.reduce((a, b) => a + b.c, 0);
             let avg = this.eng.myDeck.length ? (sum / this.eng.myDeck.length).toFixed(1) : 0;
-            ctx.fillStyle = "#c864ff";
+            ctx.fillStyle = "#800080";
             ctx.font = "italic 16px Arial";
             ctx.textAlign = "right";
             ctx.fillText(`Avg Elixir: ${avg}`, W - 20, 80);
 
-            this.drawBtn(this.backBtn, "BACK", "red");
+            this.drawBtn(this.backBtn, "BACK", "#FF6347");
             return;
         }
 
         if (this.state === State.DEBUG_MENU) {
-            ctx.fillStyle = '#1e1e50';
+            ctx.fillStyle = '#A5D6A7';
             ctx.fillRect(0, 0, W, H);
-            this.drawBtn(this.debugToggleBtn, "SHOW PATH/RANGE", this.eng.debugView ? "green" : "red");
-            this.drawBtn(this.enemyDeckBtn, "BUILD ENEMY DECK", "orange");
-            this.drawBtn(this.backBtn, "BACK", "red");
+            this.drawBtn(this.debugToggleBtn, "SHOW PATH/RANGE", this.eng.debugView ? "#32CD32" : "#FF6347");
+            this.drawBtn(this.enemyDeckBtn, "BUILD ENEMY DECK", "#FFA500");
+            this.drawBtn(this.backBtn, "BACK", "#FF6347");
             return;
         }
 
@@ -429,10 +427,10 @@ class Main {
         }
 
         if (this.state === State.NEW_CARD) {
-            ctx.fillStyle = "#320064";
+            ctx.fillStyle = "#e0f0e0";
             ctx.fillRect(0, 0, W, H);
-            this.drawCenteredString("NEW CARD", W / 2, 150, "bold 30px Arial", "white");
-            this.drawCenteredString("UNLOCKED!", W / 2, 190, "bold 30px Arial", "white");
+            this.drawCenteredString("NEW CARD", W / 2, 150, "bold 30px Arial", "#006400");
+            this.drawCenteredString("UNLOCKED!", W / 2, 190, "bold 30px Arial", "#006400");
 
             if (this.justUnlocked) {
                 let cardW = 140, cardH = 180;
@@ -440,16 +438,12 @@ class Main {
                 let cy = (H - cardH) / 2;
 
                 ctx.fillStyle = "white";
-                ctx.fillRect(cx, cy, cardW, cardH);
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = "#333";
-                ctx.strokeRect(cx, cy, cardW, cardH);
-                ctx.lineWidth = 1;
+                this.drawRoundRect(cx, cy, cardW, cardH, 15, true, true);
 
                 this.drawCenteredString(this.justUnlocked.n, cx + cardW / 2, cy + cardH / 2, "bold 18px Arial", "black");
                 this.drawElixirCost(cx - 10, cy - 10, this.justUnlocked.c);
             }
-            this.drawBtn(this.continueBtn, "CONTINUE", "green");
+            this.drawBtn(this.continueBtn, "CONTINUE", "#32CD32");
             return;
         }
 
@@ -860,10 +854,30 @@ class Main {
         }
 
         ctx.fillStyle = color;
-        ctx.fillRect(rx, ry, rw, rh);
-        ctx.strokeStyle = 'black';
-        ctx.strokeRect(rx, ry, rw, rh);
+        this.drawRoundRect(rx, ry, rw, rh, 10, true, true);
         this.drawCenteredString(text, rx + rw / 2, ry + rh / 2, "bold 20px Arial", "white");
+    }
+
+    drawRoundRect(x, y, w, h, radius, fill, stroke) {
+        if (typeof stroke === 'undefined') { stroke = true; }
+        if (typeof radius === 'undefined') { radius = 5; }
+        if (typeof radius === 'number') { radius = { tl: radius, tr: radius, br: radius, bl: radius }; } else {
+            var defaultRadius = { tl: 0, tr: 0, br: 0, bl: 0 };
+            for (var side in defaultRadius) { radius[side] = radius[side] || defaultRadius[side]; }
+        }
+        ctx.beginPath();
+        ctx.moveTo(x + radius.tl, y);
+        ctx.lineTo(x + w - radius.tr, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
+        ctx.lineTo(x + w, y + h - radius.br);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
+        ctx.lineTo(x + radius.bl, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
+        ctx.lineTo(x, y + radius.tl);
+        ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+        ctx.closePath();
+        if (fill) { ctx.fill(); }
+        if (stroke) { ctx.stroke(); }
     }
 
     drawCenteredString(text, x, y, font, color) {
