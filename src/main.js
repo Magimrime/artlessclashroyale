@@ -68,8 +68,8 @@ class Main {
         this.yesBtn = { x: W / 2 - 130, y: H / 2, w: 120, h: 50 };
         this.noBtn = { x: W / 2 + 10, y: H / 2, w: 120, h: 50 };
         this.debugBtn = { x: W - 59, y: 0, w: 53, h: 26 };
-        this.debugToggleBtn = { x: W / 2 - 100, y: H / 2 - 60, w: 200, h: 50 };
-        this.enemyDeckBtn = { x: W / 2 - 100, y: H / 2 + 20, w: 200, h: 50 };
+        this.debugToggleBtn = { x: W / 2 - 110, y: H / 2 - 60, w: 220, h: 50 };
+        this.enemyDeckBtn = { x: W / 2 - 110, y: H / 2 + 20, w: 220, h: 50 };
         this.visitorCount = "...";
 
         // Fetch Visitor Count
@@ -848,11 +848,22 @@ class Main {
     }
 
     drawBtn(rect, text, color) {
+        let rx = rect.x, ry = rect.y, rw = rect.w, rh = rect.h;
+
+        // Check hover
+        if (this.contains(rect, this.mouse.x, this.mouse.y)) {
+            let scale = 1.1;
+            rw = rect.w * scale;
+            rh = rect.h * scale;
+            rx = rect.x - (rw - rect.w) / 2;
+            ry = rect.y - (rh - rect.h) / 2;
+        }
+
         ctx.fillStyle = color;
-        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+        ctx.fillRect(rx, ry, rw, rh);
         ctx.strokeStyle = 'black';
-        ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-        this.drawCenteredString(text, rect.x + rect.w / 2, rect.y + rect.h / 2, "bold 20px Arial", "white");
+        ctx.strokeRect(rx, ry, rw, rh);
+        this.drawCenteredString(text, rx + rw / 2, ry + rh / 2, "bold 20px Arial", "white");
     }
 
     drawCenteredString(text, x, y, font, color) {
