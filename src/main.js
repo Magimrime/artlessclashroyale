@@ -486,6 +486,34 @@ class Main {
             if (this.eng.t2R && this.eng.t2R.hp > 0) {
                 ctx.fillRect(W / 2, 200, W / 2, RIV_Y - 200); // Updated start to 200
             }
+
+            // HOVER PREVIEW (Ghost Unit & Range)
+            if (this.eng.sel && this.mouse.y < H - 120) {
+                let c = this.eng.sel;
+                let range = c.rn || 0;
+                let radius = 18; // Default visual radius
+                if (c.t === 3 || c.n === "Cannon" || c.n === "Inferno Tower") radius = 25; // Buildings
+
+                // Draw Range Circle
+                if (range > 0) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.arc(this.mouse.x, this.mouse.y, range, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.lineWidth = 1;
+                }
+
+                // Draw Ghost Unit
+                ctx.globalAlpha = 0.6;
+                ctx.fillStyle = this.eng.p1.elx >= c.c ? "#3296ff" : "#888"; // Blue if affordable, gray if not
+                ctx.beginPath();
+                ctx.arc(this.mouse.x, this.mouse.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
         }
 
         // Projectiles
