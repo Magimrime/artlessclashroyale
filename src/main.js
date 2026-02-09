@@ -53,6 +53,7 @@ class Main {
         this.enemyDeckBtn = { x: 0, y: 0, w: 200, h: 50 };
         this.cardRects = [];
         this.nextCardRect = { x: W - 60, y: H - 105, w: 60, h: 105 };
+        this.cardOffsets = [0, 0, 0, 0]; // For hover animation
 
         this.init();
     }
@@ -278,6 +279,21 @@ class Main {
             this.state = State.PLAY;
             this.eng.gameStart = now;
         }
+
+        // Update Card Hover Animations
+        if (this.state === State.PLAY) {
+            for (let i = 0; i < 4; i++) {
+                let target = 0;
+                let rect = this.cardRects[i];
+                // Check if mouse is within the card's horizontal bounds and roughly near the bottom
+                if (this.mouse.x >= rect.x && this.mouse.x <= rect.x + rect.w && this.mouse.y >= rect.y - 50) {
+                    target = 40; // Slide up by 40px
+                }
+                // Smooth interpolation (Lerp)
+                this.cardOffsets[i] += (target - this.cardOffsets[i]) * 0.2;
+            }
+        }
+
         if (this.state === State.PLAY) {
             this.eng.upd();
             if (this.eng.over) {
@@ -289,11 +305,11 @@ class Main {
     }
 
     render() {
-        ctx.fillStyle = '#32a032';
+        ctx.fillStyle = '#66BB6A';
         ctx.fillRect(0, 0, W, H);
 
         if (this.state === State.RESUME_PROMPT) {
-            ctx.fillStyle = '#A5D6A7';
+            ctx.fillStyle = '#66BB6A';
             ctx.fillRect(0, 0, W, H);
             this.drawCenteredString("Resume previous game?", W / 2, H / 2 - 75, "bold 30px Arial", "#004000");
             this.drawBtn(this.resumeYesBtn, "YES", "#32CD32");
@@ -302,7 +318,7 @@ class Main {
         }
 
         if (this.state === State.TITLE) {
-            ctx.fillStyle = '#A5D6A7';
+            ctx.fillStyle = '#66BB6A';
             ctx.fillRect(0, 0, W, H);
 
             // Draw Visitor Count
@@ -386,7 +402,7 @@ class Main {
         }
 
         if (this.state === State.DEBUG_MENU) {
-            ctx.fillStyle = '#A5D6A7';
+            ctx.fillStyle = '#66BB6A';
             ctx.fillRect(0, 0, W, H);
             this.drawBtn(this.debugToggleBtn, "SHOW PATH/RANGE", this.eng.debugView ? "#32CD32" : "#FF6347");
             this.drawBtn(this.enemyDeckBtn, "BUILD ENEMY DECK", "#FFA500");
@@ -666,28 +682,27 @@ class Main {
                 if (i < this.eng.p1.h.length) {
                     let c = this.eng.p1.h[i];
                     let rect = this.cardRects[i];
+                    let offset = this.cardOffsets[i];
+                    let drawY = rect.y - offset;
                     let selected = this.eng.sel === c;
 
-                    // Card Background
-                    ctx.fillStyle = selected ? "#00c800" : (this.eng.p1.elx >= c.c ? "white" : "gray");
-                    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                    // Shadow (only when lifted or generally for depth)
+                    ctx.fillStyle = "rgba(0,0,0,0.3)";
+                    this.drawRoundRect(rect.x + 4, drawY + 4, rect.w, rect.h, 10, true, false);
 
-                    // Card Border
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = "black";
-                    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-                    ctx.lineWidth = 1;
+                    // Card Background
+                    ctx.fillStyle = selected ? "#81C784" : (this.eng.p1.elx >= c.c ? "white" : "#D3D3D3");
+                    this.drawRoundRect(rect.x, drawY, rect.w, rect.h, 10, true, true);
 
                     // Name
-                    this.drawCenteredString(c.n, rect.x + rect.w / 2, rect.y + rect.h / 2, "bold 12px Arial", "black");
+                    this.drawCenteredString(c.n, rect.x + rect.w / 2, drawY + rect.h / 2, "bold 11px Arial", "black");
 
-                    // Mirror Name
                     if (c.n === "Mirror" && this.eng.p1.lastPlayedCard) {
-                        this.drawCenteredString(`(${this.eng.p1.lastPlayedCard.n})`, rect.x + rect.w / 2, rect.y + rect.h / 2 + 12, "bold 10px Arial", "black");
+                        this.drawCenteredString(`(${this.eng.p1.lastPlayedCard.n})`, rect.x + rect.w / 2, drawY + rect.h / 2 + 12, "bold 10px Arial", "black");
                     }
 
-                    // Elixir Cost (Purple Circle, mostly inside)
-                    this.drawElixirCost(rect.x + 8, rect.y + 8, c.c);
+                    // Elixir Cost
+                    this.drawElixirCost(rect.x + 8, drawY + 8, c.c);
                 }
             }
 
