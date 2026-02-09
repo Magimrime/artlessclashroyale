@@ -3,6 +3,32 @@ import Troop from './entities/Troop.js';
 import Tower from './entities/Tower.js';
 import Building from './entities/Building.js';
 
+
+// --- DEBUG ERROR HANDLER ---
+window.logError = function (msg) {
+    const log = document.getElementById('debug-log');
+    if (log) {
+        log.style.display = 'block';
+        const div = document.createElement('div');
+        div.className = 'log-error';
+        div.textContent = msg;
+        log.appendChild(div);
+    }
+    console.error(msg);
+};
+
+window.onerror = function (msg, url, lineNo, columnNo, error) {
+    const string = msg.toLowerCase();
+    const substring = "script error";
+    if (string.indexOf(substring) > -1) {
+        window.logError('Script Error: See Console for details');
+    } else {
+        window.logError(`Error: ${msg} \nAt: ${lineNo}:${columnNo}`);
+    }
+    return false;
+};
+// ---------------------------
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -274,6 +300,13 @@ class Main {
     }
 
     loop() {
+        // Hide loading screen on first successful loop
+        const loader = document.getElementById('loading-overlay');
+        if (loader && loader.style.opacity !== '0') {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 500);
+        }
+
         const now = Date.now();
         if (this.state === State.CNT && now - this.t0 > 3000) {
             this.state = State.PLAY;
@@ -945,5 +978,9 @@ class Main {
 }
 
 window.onload = () => {
-    new Main();
+    try {
+        new Main();
+    } catch (e) {
+        window.logError("Startup Crash: " + e.message + "\nStack: " + e.stack);
+    }
 };
