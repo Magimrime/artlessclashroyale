@@ -563,8 +563,7 @@ class Main {
                 } else {
                     // Normal Unit/Building Ghost
                     let range = c.rn || 0;
-                    let radius = 18; // Default visual radius
-                    if (c.t === 3 || c.n === "Cannon" || c.n === "Inferno Tower") radius = 25; // Buildings
+                    let radius = this.eng.getVisualRadius(c); // Use dynamic radius
 
                     // Draw Range Circle
                     if (range > 0) {
@@ -902,8 +901,9 @@ class Main {
             ctx.fillRect(e.x - 25, e.y - 25, 50, 50);
             this.drawHealthBar(e.x, e.y - 35, e.hp, e.mhp);
         } else if (isBuilding) {
-            ctx.fillRect(e.x - 20, e.y - 20, 40, 40);
-            this.drawHealthBar(e.x, e.y - 30, e.hp, e.mhp);
+            let vr = this.eng.getVisualRadius(e.c);
+            ctx.fillRect(e.x - vr, e.y - vr, vr * 2, vr * 2);
+            this.drawHealthBar(e.x, e.y - vr - 10, e.hp, e.mhp);
         } else {
             ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = "black"; ctx.stroke();

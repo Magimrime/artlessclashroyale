@@ -219,7 +219,7 @@ export default class Troop extends Entity {
             if (t && this.dist(t) < 30 + targetHitboxRad) {
                 this.hp = 0;
                 if (this.c.n === "Fire Spirit") {
-                    g.projs.push(new Proj(this.x, this.y, t.x, t.y, t, 10, false, 60, 60, this.tm, false).asFireArea());
+                    g.projs.push(new Proj(this.x, this.y, t.x, t.y, t, 10, false, 60, 120, this.tm, false).asFireArea());
                     return;
                 }
                 if (this.c.n === "Heal Spirit") {

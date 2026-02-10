@@ -1,9 +1,12 @@
 import Entity from './Entity.js';
 import Proj from './Proj.js';
+// Troop import removed to avoid circular dependency
 
 export default class Building extends Entity {
     constructor(t, x, y, c) {
-        super(t, x, y, c.hp, c.n === "Cannon" ? 15 : 20, 10000, false, false);
+        let radius = (c.n === "Cannon") ? 15 : 20;
+        if (c.n === "Crate") radius = 14;
+        super(t, x, y, c.hp, radius, 10000, false, false);
         this.c = c;
         this.cd = 0;
         this.lk = null;
@@ -17,9 +20,7 @@ export default class Building extends Entity {
         // Lifetime decay
         this.hp -= this.mhp / this.c.ms;
         if (this.hp <= 0) {
-            if (this.c.n === "Elixir Collector") {
-                g.giveElixir(this.tm, 1.0);
-            }
+            // Death Logic handled via die(g) called by GameEngine
             return;
         }
 
@@ -80,6 +81,14 @@ export default class Building extends Entity {
             this.atk = false;
             this.infernoTick = 0;
             this.cd = this.c.rt;
+        }
+    }
+
+    die(g) {
+        if (this.c.n === "Elixir Collector") {
+            g.giveElixir(this.tm, 1.0);
+        } else if (this.c.n === "Crate") {
+            g.handleCrateDeath(this);
         }
     }
 }

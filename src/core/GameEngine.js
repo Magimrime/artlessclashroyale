@@ -91,7 +91,8 @@ export default class GameEngine {
             new Card("The Log", 2, 0, 268, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Barbarian Barrel", 2, 0, 200, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Royal Recruits", 7, 440, 110, 1.5, 23, 0, 20, 78, 150, false, false),
-            new Card("Dark Prince", 4, 1000, 200, 1.2, 20, 0, 120, 60, 150, false, false)
+            new Card("Dark Prince", 4, 1000, 200, 1.2, 20, 0, 120, 60, 150, false, false),
+            new Card("Crate", 2, 100, 0, 0, 0, 3, 1800, 0, 0, false, false)
         ];
 
         // Apply Stat Adjustments
@@ -332,6 +333,7 @@ export default class GameEngine {
 
     getVisualRadius(c) {
         if (c.n === "Cannon") return 25;
+        if (c.n === "Crate") return 14;
         if (c.t === 3) return 20;
         return 18;
     }
@@ -763,5 +765,29 @@ export default class GameEngine {
     // Placeholder for render, will be handled in Main.js or a separate Renderer
     render(ctx) {
         // ...
+    }
+
+    spawnTroop(team, x, y, card) {
+        if (!card) return;
+        this.ents.push(new Troop(team, x, y, card));
+    }
+
+    handleCrateDeath(building) {
+        let rand = Math.floor(Math.random() * 3);
+        if (rand === 0) {
+            // Spawn 3 Skeletons
+            let skelCard = this.getCard("Skeletons");
+            for (let i = 0; i < 3; i++) {
+                this.ents.push(new Troop(building.tm, building.x + (i - 1) * 10, building.y, skelCard));
+            }
+        } else if (rand === 1) {
+            // Spawn Spirit
+            let spirits = ["Fire Spirit", "Ice Spirit", "Electro Spirit", "Heal Spirit"];
+            let sName = spirits[Math.floor(Math.random() * spirits.length)];
+            this.ents.push(new Troop(building.tm, building.x, building.y, this.getCard(sName)));
+        } else {
+            // Explode (240 dmg, 60 radius)
+            this.projs.push(new Proj(building.x, building.y, building.x, building.y, null, 0, false, 60, 240, building.tm, false).asFireArea());
+        }
     }
 }
