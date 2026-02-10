@@ -99,8 +99,9 @@ export default class GameEngine {
         this.allCards.forEach(c => {
             if (c.n !== "Mother Witch") c.hp = Math.floor(c.hp * 1.30);
 
-            // Speed adjustment: 1.5x slower for non-slow troops
-            if (c.s > 1.0) c.s = c.s / 1.5;
+            // Global reductions
+            c.hp = Math.floor(c.hp / 2);
+            c.s = c.s / 2;
 
             if (c.t === 2) { // Spell
                 if (c.n === "Fireball") c.d = Math.floor(c.d * 1.60);
@@ -119,7 +120,10 @@ export default class GameEngine {
         // Apply Stat Adjustments to Tokens
         this.tokens.forEach(c => {
             if (c.n !== "Mother Witch") c.hp = Math.floor(c.hp * 1.30);
-            if (c.s > 1.0) c.s = c.s / 1.5;
+
+            // Global reductions
+            c.hp = Math.floor(c.hp / 2);
+            c.s = c.s / 2;
         });
 
         this.enemyAI = null;

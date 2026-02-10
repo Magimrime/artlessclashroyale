@@ -3,7 +3,7 @@ import Proj from './Proj.js';
 
 export default class Tower extends Entity {
     constructor(t, x, y, k) {
-        super(t, x, y, k ? 6500 : 4500, k ? 25 : 20, 10000, false, true);
+        super(t, x, y, k ? 2167 : 1500, k ? 25 : 20, 10000, false, true);
         this.kg = k; // King Tower?
         this.actv = !k; // Active?
         this.cd = 0; // Cooldown
