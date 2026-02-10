@@ -74,6 +74,10 @@ export default class Troop extends Entity {
             this.shield = 199;
             this.maxShield = 199;
         }
+        if (c.n === "Dark Prince") {
+            this.shield = 199;
+            this.maxShield = 199;
+        }
 
         if (c.n === "Princess") this.sightRange = 400;
         if (c.n === "Prince") this.rad = 12;
@@ -276,7 +280,7 @@ export default class Troop extends Entity {
 
         // Bridge Logic
         if (!this.fly && this.currentTarget) {
-            if (["Hog Rider", "Royal Hogs", "Prince"].includes(this.c.n) && !this.jp) {
+            if (["Hog Rider", "Royal Hogs", "Prince", "Dark Prince"].includes(this.c.n) && !this.jp) {
                 if ((this.y < RIV_Y && this.currentTarget.y > RIV_Y) || (this.y > RIV_Y && this.currentTarget.y < RIV_Y)) {
                     if (Math.abs(this.y - RIV_Y) < 40) {
                         let onBridge = (this.x >= W / 4 - 30 && this.x <= W / 4 + 30) || (this.x >= W * 3 / 4 - 30 && this.x <= W * 3 / 4 + 30);
@@ -285,7 +289,7 @@ export default class Troop extends Entity {
                             this.kbTime = 0;
                             this.fly = true;
                             this.preJump = 0;
-                            if (this.c.n === "Prince") {
+                            if (this.c.n === "Prince" || this.c.n === "Dark Prince") {
                                 this.isCharging = false;
                                 this.distWalked = 0;
                             }
@@ -401,7 +405,7 @@ export default class Troop extends Entity {
                             e.hp -= this.c.d;
                 } else {
                     let dmg = this.c.d;
-                    if (this.c.n === "Prince") dmg = Math.floor(dmg * 0.3);
+                    if (this.c.n === "Prince" || this.c.n === "Dark Prince") dmg = Math.floor(dmg * 0.3);
                     if (this.isCharging) {
                         if (this.c.n === "Knight") dmg = Math.floor(dmg * 1.5);
                         else dmg *= 2;
@@ -522,7 +526,7 @@ export default class Troop extends Entity {
                 this.y += dy * this.c.s * (this.isCharging ? 2.0 : 1.0);
             }
 
-            if (this.c.n === "Prince" || this.c.n === "Knight") {
+            if (this.c.n === "Prince" || this.c.n === "Knight" || this.c.n === "Dark Prince") {
                 this.distWalked += Math.hypot(dx * this.c.s, dy * this.c.s);
                 if (this.distWalked > 20) this.isCharging = true;
             }

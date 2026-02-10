@@ -90,13 +90,17 @@ export default class GameEngine {
             new Card("Mother Witch", 4, 532, 133, 1.2, 110, 0, 10, 72, 150, false, true),
             new Card("The Log", 2, 0, 268, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Barbarian Barrel", 2, 0, 200, 0, 0, 2, 0, 0, 0, false, false),
-            new Card("Royal Recruits", 7, 440, 110, 1.5, 23, 0, 20, 78, 150, false, false)
+            new Card("Royal Recruits", 7, 440, 110, 1.5, 23, 0, 20, 78, 150, false, false),
+            new Card("Dark Prince", 4, 1000, 200, 1.2, 20, 0, 120, 60, 150, false, false)
         ];
 
         // Apply Stat Adjustments
         this.allCards.forEach(c => {
             if (c.n !== "Mother Witch") c.hp = Math.floor(c.hp * 1.30);
-            if (c.s > 0) c.s = c.s * 0.75; // 25% slower
+
+            // Speed adjustment: 1.5x slower for non-slow troops
+            if (c.s > 1.0) c.s = c.s / 1.5;
+
             if (c.t === 2) { // Spell
                 if (c.n === "Fireball") c.d = Math.floor(c.d * 1.60);
                 else c.d = Math.floor(c.d * 1.30);
@@ -114,7 +118,7 @@ export default class GameEngine {
         // Apply Stat Adjustments to Tokens
         this.tokens.forEach(c => {
             if (c.n !== "Mother Witch") c.hp = Math.floor(c.hp * 1.30);
-            if (c.s > 0) c.s = c.s * 0.75;
+            if (c.s > 1.0) c.s = c.s / 1.5;
         });
 
         this.enemyAI = null;
@@ -140,6 +144,8 @@ export default class GameEngine {
             this.unlockedCards.push(pool[i]);
         for (let i = 0; i < Math.min(8, this.unlockedCards.length); i++)
             this.myDeck.push(this.unlockedCards[i]);
+
+
     }
 
     unlockRandomCard() {
@@ -330,6 +336,25 @@ export default class GameEngine {
         return 18;
     }
 
+    getSpellRadius(c) {
+        if (c.n === "Poison" || c.n === "Graveyard" || c.n === "Freeze" || c.n === "Arrows") return { type: 'circle', val: 160 };
+        if (c.n === "Vines") return { type: 'circle', val: 80 };
+        if (c.n === "Zap") return { type: 'circle', val: 40 };
+        if (c.n === "Fireball" || c.n === "Royal Delivery" || c.n === "Rocket" || c.n === "Giant Snowball") return { type: 'circle', val: 60 };
+        if (c.n === "The Log") return { type: 'rect', w: 70, h: 20 }; // Visual approximation
+        if (c.n === "Barbarian Barrel") return { type: 'rect', w: 44, h: 20 };
+        if (c.n === "Goblin Barrel") return { type: 'circle', val: 40 }; // Impact radius approx
+        if (c.n === "Clone") return { type: 'circle', val: 90 };
+        if (c.n === "Tornado") return { type: 'circle', val: 110 };
+        if (c.n === "Heal Spirit") return { type: 'circle', val: 0 };
+        if (c.n === "Ice Spirit" || c.n === "Electro Spirit" || c.n === "Fire Spirit") return { type: 'circle', val: 0 };
+
+        // Default for other spells
+        if (c.t === 2) return { type: 'circle', val: 60 };
+
+        return null;
+    }
+
     spawn(x, y) {
         if (this.tiebreaker) return;
         if (!this.sel || y > this.H - 120) return;
@@ -392,15 +417,19 @@ export default class GameEngine {
         if (c.n === "Goblin Barrel") {
             this.projs.push(new Proj(tm === 0 ? this.W / 2 : this.W / 2, tm === 0 ? this.H : 0, x, y, null, 15, false, 10, 0, tm, true));
         } else if (c.n === "Royale Delivery") {
-            this.projs.push(new Proj(x, y, x, y, null, 0, false, 60, 50, tm, false).asBrownArea());
+            let shape = this.getSpellRadius(c);
+            let rad = shape && shape.type === 'circle' ? shape.val : 60;
+            this.projs.push(new Proj(x, y, x, y, null, 0, false, rad, 50, tm, false).asBrownArea());
             let recruit = this.getCard("Royal Recruits");
             this.ents.push(new Troop(tm, x, y, recruit));
         } else if (c.n === "Poison") {
-            this.projs.push(new Proj(x, y, x, y, null, 0, true, 200, 25, tm, false).asPoison());
+            let shape = this.getSpellRadius(c); // Returns val: 100
+            let rad = shape && shape.type === 'circle' ? shape.val : 100;
+            this.projs.push(new Proj(x, y, x, y, null, 0, true, rad, 25, tm, false).asPoison());
         } else if (c.n === "Graveyard") {
-            this.projs.push(new Proj(x, y, x, y, null, 0, true, 200, 0, tm, false).asGraveyard());
-        } else if (c.n === "Graveyard") {
-            this.projs.push(new Proj(x, y, x, y, null, 0, true, 200, 0, tm, false).asGraveyard());
+            let shape = this.getSpellRadius(c); // Returns val: 100
+            let rad = shape && shape.type === 'circle' ? shape.val : 100;
+            this.projs.push(new Proj(x, y, x, y, null, 0, true, rad, 0, tm, false).asGraveyard());
         } else if (c.n === "The Log") {
             // Log rolls 10.1 tiles. 1 tile ~ 30px. 10.1 * 30 = 303px.
             // Speed: 2.5x slower than 10 => 4.
@@ -415,14 +444,16 @@ export default class GameEngine {
             let p = new Proj(x, y, x, ty, null, 2.66, false, 60, Math.floor(c.d), tm, false).asBarbBarrelLog();
             this.projs.push(p);
         } else if (c.n === "Clone") {
-            let p = new Proj(x, y, x, y, null, 0, true, 90, 0, tm, false);
+            let shape = this.getSpellRadius(c);
+            let rad = shape && shape.type === 'circle' ? shape.val : 90;
+            let p = new Proj(x, y, x, y, null, 0, true, rad, 0, tm, false);
             p.life = 5;
             p.isClone = true;
             this.projs.push(p);
 
             let toClone = [];
             for (let e of this.ents) {
-                if (e instanceof Troop && e.tm === tm && Math.hypot(e.x - x, e.y - y) < 90 && !e.isClone && !(e instanceof Building) && !(e instanceof Tower)) {
+                if (e instanceof Troop && e.tm === tm && Math.hypot(e.x - x, e.y - y) < rad && !e.isClone && !(e instanceof Building) && !(e instanceof Tower)) {
                     toClone.push(e);
                 }
             }
@@ -438,11 +469,14 @@ export default class GameEngine {
                 this.ents.push(clone);
             }
         } else if (c.t === 2) {
-            let rad = 60, dmg = c.d;
-            if (c.n === "Zap") { rad = 40; dmg = 150; }
-            if (c.n === "Vines") { rad = 80; dmg = 20; }
-            if (c.n === "Freeze") { rad = 100; dmg = 5; }
-            if (c.n === "Arrows") { rad = 100; dmg = 120; }
+            let shape = this.getSpellRadius(c);
+            let rad = shape && shape.type === 'circle' ? shape.val : 60;
+            let dmg = c.d;
+            if (c.n === "Zap") { dmg = 150; }
+            if (c.n === "Vines") { dmg = 20; }
+            if (c.n === "Freeze") { dmg = 5; }
+            if (c.n === "Arrows") { dmg = 120; }
+
             let p = new Proj(x, y, x, y, null, 0, true, rad, dmg, tm, false);
             if (c.n === "Zap") p.asStun();
             if (c.n === "Vines") p.isRoot = true;

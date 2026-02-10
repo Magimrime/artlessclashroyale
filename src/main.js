@@ -523,28 +523,67 @@ class Main {
             // HOVER PREVIEW (Ghost Unit & Range)
             if (this.eng.sel && this.mouse.y < H - 120) {
                 let c = this.eng.sel;
-                let range = c.rn || 0;
-                let radius = 18; // Default visual radius
-                if (c.t === 3 || c.n === "Cannon" || c.n === "Inferno Tower") radius = 25; // Buildings
+                let spellShape = this.eng.getSpellRadius(c);
+                let canAfford = this.eng.p1.elx >= c.c;
 
-                // Draw Range Circle
-                if (range > 0) {
-                    ctx.beginPath();
-                    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([5, 5]);
-                    ctx.arc(this.mouse.x, this.mouse.y, range, 0, Math.PI * 2);
-                    ctx.stroke();
+                ctx.globalAlpha = 0.6;
+                if (spellShape) {
+                    // Animated Dashed Border Style
+                    let time = Date.now() / 50; // Speed of animation
+
+                    ctx.fillStyle = canAfford ? "rgba(255, 255, 255, 0.2)" : "rgba(100, 100, 100, 0.2)";
+                    ctx.strokeStyle = "white"; // Always white for visibility
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([10, 10]);
+                    ctx.lineDashOffset = -time; // Animate march
+
+                    if (spellShape.type === 'circle') {
+                        ctx.beginPath();
+                        ctx.arc(this.mouse.x, this.mouse.y, spellShape.val, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    } else if (spellShape.type === 'rect') {
+                        ctx.beginPath();
+                        ctx.rect(this.mouse.x - spellShape.w / 2, this.mouse.y - spellShape.h / 2, spellShape.w, spellShape.h);
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+
+                    // Reset Dash
                     ctx.setLineDash([]);
                     ctx.lineWidth = 1;
-                }
 
-                // Draw Ghost Unit
-                ctx.globalAlpha = 0.6;
-                ctx.fillStyle = this.eng.p1.elx >= c.c ? "#3296ff" : "#888"; // Blue if affordable, gray if not
-                ctx.beginPath();
-                ctx.arc(this.mouse.x, this.mouse.y, radius, 0, Math.PI * 2);
-                ctx.fill();
+                    // Center marker
+                    ctx.fillStyle = "white";
+                    ctx.beginPath();
+                    ctx.arc(this.mouse.x, this.mouse.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = "black";
+                    ctx.stroke();
+                } else {
+                    // Normal Unit/Building Ghost
+                    let range = c.rn || 0;
+                    let radius = 18; // Default visual radius
+                    if (c.t === 3 || c.n === "Cannon" || c.n === "Inferno Tower") radius = 25; // Buildings
+
+                    // Draw Range Circle
+                    if (range > 0) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]);
+                        ctx.arc(this.mouse.x, this.mouse.y, range, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.lineWidth = 1;
+                    }
+
+                    // Draw Ghost Unit Body
+                    ctx.fillStyle = canAfford ? "#3296ff" : "#888"; // Blue if affordable, gray if not
+                    ctx.beginPath();
+                    ctx.arc(this.mouse.x, this.mouse.y, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 ctx.globalAlpha = 1.0;
             }
         }

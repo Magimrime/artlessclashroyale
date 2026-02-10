@@ -117,7 +117,12 @@
             </div>
             <canvas id="gameCanvas"></canvas>
         </div>
-        <script type="module" src="src/main.js"></script>
+        <script>
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = 'src/main.js?v=' + Date.now();
+            document.body.appendChild(script);
+        </script>
     </body>
 
 </html>
