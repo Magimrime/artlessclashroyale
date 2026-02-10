@@ -42,12 +42,12 @@ export default class GameEngine {
             new Card("Fireball", 4, 0, 200, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Mini PEKKA", 4, 900, 300, 1.8, 20, 0, 15, 60, 150, false, false),
             new Card("Zap", 2, 0, 60, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Skeletons", 1, 5, 40, 2.0, 6, 0, 2, 22, 150, false, false),
+            new Card("Skeletons", 1, 20, 40, 2.0, 6, 0, 2, 22, 150, false, false),
             new Card("Musketeer", 4, 500, 150, 1.5, 140, 0, 10, 60, 220, false, true),
             new Card("Cannon", 3, 700, 100, 0, 120, 3, 10000, 100, 120, false, false),
             new Card("Mega Knight", 7, 3000, 500, 1.2, 22, 0, 200, 100, 200, false, false),
             new Card("P.E.K.K.A", 7, 4000, 980, 0.5, 22, 0, 200, 120, 200, false, false),
-            new Card("Skeleton Army", 3, 5, 40, 2.0, 6, 0, 2, 10, 150, false, false),
+            new Card("Skeleton Army", 3, 20, 40, 2.0, 6, 0, 2, 10, 150, false, false),
             new Card("Barbarians", 5, 600, 150, 1.2, 18, 0, 10, 90, 180, false, false),
             new Card("Goblin Barrel", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Royale Delivery", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, false),
@@ -92,7 +92,7 @@ export default class GameEngine {
             new Card("Barbarian Barrel", 2, 0, 200, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Royal Recruits", 7, 500, 110, 1.5, 23, 0, 20, 78, 150, false, false),
             new Card("Dark Prince", 4, 1000, 200, 1.2, 20, 0, 120, 60, 150, false, false),
-            new Card("Crate", 2, 100, 0, 0, 0, 3, 1800, 0, 0, false, false)
+            new Card("Crate", 2, 300, 0, 0, 0, 3, 1800, 0, 0, false, false)
         ];
 
         // Apply Stat Adjustments
