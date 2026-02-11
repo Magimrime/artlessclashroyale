@@ -32,6 +32,7 @@ export default class Troop extends Entity {
         super(t, x, y, c.hp, mass, mass, c.fl, c.ar);
 
         this.c = c;
+        this.tags = c.tags || [];
         this.cd = 0;
         this.jt = null;
         this.jd = 0;
