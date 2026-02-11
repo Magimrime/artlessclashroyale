@@ -629,7 +629,7 @@ export default class GameEngine {
 
         let rate = this.isDoubleElixir ? 0.02 : 0.01;
         this.p1.elx = Math.min(10, this.p1.elx + rate);
-        this.p2.elx = Math.min(10, this.p2.elx + rate);
+        this.p2.elx = Math.min(10, this.p2.elx + rate * 0.85); // 15% slower than player
 
         this.aiTick++;
 

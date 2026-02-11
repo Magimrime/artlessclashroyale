@@ -91,10 +91,8 @@ export default class EnemyAI {
         // Initial Delay
         if (this.aiTick < 60) return;
 
-        // Elixir Regen
-        if (this.g.isDoubleElixir) this.p.elx += 0.045; // 2x Speed
-        else this.p.elx += 0.025; // Normal Speed
-        if (this.p.elx > 10) this.p.elx = 10;
+
+
 
         // Elixir Management - Don't leak unless waiting (handled by handleFullElixir)
         if (this.p.elx >= 9.5) {
