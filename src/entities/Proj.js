@@ -155,7 +155,7 @@ export default class Proj {
             this.y += Math.sin(a) * this.spd;
             if (d < this.spd) {
                 this.life = 0;
-                let gob = new Card("Goblins", 0, 90, 100, 2.5, 20, 0, 3, 60, 200, false, false);
+                let gob = g.getCard("Goblins") || new Card("Goblins", 0, 90, 100, 1.7, 12, 0, 2, 60, 200, false, false);
                 g.ents.push(new Troop(this.tm, this.x, this.y, gob));
                 g.ents.push(new Troop(this.tm, this.x - 10, this.y + 10, gob));
                 g.ents.push(new Troop(this.tm, this.x + 10, this.y + 10, gob));
