@@ -369,9 +369,11 @@ export default class GameEngine {
     }
 
     getSpellRadius(c) {
-        if (c.n === "Poison" || c.n === "Graveyard" || c.n === "Freeze" || c.n === "Arrows") return { type: 'circle', val: 160 };
+        if (c.n === "Arrows") return { type: 'circle', val: 120 };
+        if (c.n === "Poison" || c.n === "Graveyard") return { type: 'circle', val: 110 };
+        if (c.n === "Freeze") return { type: 'circle', val: 100 };
         if (c.n === "Vines") return { type: 'circle', val: 80 };
-        if (c.n === "Zap") return { type: 'circle', val: 40 };
+        if (c.n === "Zap") return { type: 'circle', val: 65 };
         if (c.n === "Fireball" || c.n === "Royal Delivery" || c.n === "Rocket" || c.n === "Giant Snowball") return { type: 'circle', val: 60 };
         if (c.n === "The Log") return { type: 'rect', w: 70, h: 20 }; // Visual approximation
         if (c.n === "Barbarian Barrel") return { type: 'rect', w: 44, h: 20 };
@@ -463,9 +465,9 @@ export default class GameEngine {
             let rad = shape && shape.type === 'circle' ? shape.val : 100;
             this.projs.push(new Proj(x, y, x, y, null, 0, true, rad, 0, tm, false).asGraveyard());
         } else if (c.n === "The Log") {
-            // Log rolls 20.2 tiles (Double). 1 tile ~ 30px. 20.2 * 30 = 606px.
-            // Speed: 2.5x slower than 10 => 4.
-            let dist = 606;
+            // Log rolls 280px (User requested).
+            // Speed: 2.66
+            let dist = 280;
             let ty = (tm === 0) ? y - dist : y + dist;
             let p = new Proj(x, y, x, ty, null, 2.66, false, 60, Math.floor(c.d * 0.8), tm, false).asLog();
             this.projs.push(p);

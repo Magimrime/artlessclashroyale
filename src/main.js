@@ -526,72 +526,90 @@ class Main {
             if (this.eng.t2R && this.eng.t2R.hp > 0) {
                 ctx.fillRect(W / 2, 200, W / 2, RIV_Y - 200); // Updated start to 200
             }
+        } // Close Invalid Area Logic
 
-            // HOVER PREVIEW (Ghost Unit & Range)
-            if (this.eng.sel && this.mouse.y < H - 120) {
-                let c = this.eng.sel;
-                let spellShape = this.eng.getSpellRadius(c);
-                let canAfford = this.eng.p1.elx >= c.c;
+        // HOVER PREVIEW (Ghost Unit & Range)
+        if (this.state === State.PLAY && this.eng.sel && this.mouse.y < H - 120) {
+            let c = this.eng.sel;
+            let spellShape = this.eng.getSpellRadius(c);
+            let canAfford = this.eng.p1.elx >= c.c;
 
-                ctx.globalAlpha = 0.6;
-                if (spellShape) {
-                    // Animated Dashed Border Style
-                    let time = Date.now() / 50; // Speed of animation
+            ctx.globalAlpha = 0.6;
+            if (spellShape) {
+                // Animated Dashed Border Style
+                let time = Date.now() / 50; // Speed of animation
 
+                ctx.fillStyle = canAfford ? "rgba(255, 255, 255, 0.2)" : "rgba(100, 100, 100, 0.2)";
+                ctx.strokeStyle = "white"; // Always white for visibility
+                ctx.lineWidth = 3;
+                ctx.setLineDash([10, 10]);
+                ctx.lineDashOffset = -time; // Animate march
+
+                if (["The Log", "Barbarian Barrel"].includes(c.n)) {
+                    // Draw Arrow for rolling spells
+                    let dist = (c.n === "The Log") ? 280 : 101;
+                    let ey = this.mouse.y - dist;
+                    ctx.beginPath();
+                    ctx.moveTo(this.mouse.x, this.mouse.y);
+                    ctx.lineTo(this.mouse.x, ey);
+
+                    // Arrowhead
+                    ctx.lineTo(this.mouse.x - 10, ey + 15);
+                    ctx.moveTo(this.mouse.x, ey);
+                    ctx.lineTo(this.mouse.x + 10, ey + 15);
+                    ctx.stroke();
+
+                    // Also fill rect for body width
+                    let w = (c.n === "The Log") ? 70 : 44;
                     ctx.fillStyle = canAfford ? "rgba(255, 255, 255, 0.2)" : "rgba(100, 100, 100, 0.2)";
-                    ctx.strokeStyle = "white"; // Always white for visibility
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([10, 10]);
-                    ctx.lineDashOffset = -time; // Animate march
+                    ctx.fillRect(this.mouse.x - w / 2, ey, w, dist);
+                } else if (spellShape.type === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(this.mouse.x, this.mouse.y, spellShape.val, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (spellShape.type === 'rect') {
+                    ctx.beginPath();
+                    ctx.rect(this.mouse.x - spellShape.w / 2, this.mouse.y - spellShape.h / 2, spellShape.w, spellShape.h);
+                    ctx.fill();
+                    ctx.stroke();
+                }
 
-                    if (spellShape.type === 'circle') {
-                        ctx.beginPath();
-                        ctx.arc(this.mouse.x, this.mouse.y, spellShape.val, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                    } else if (spellShape.type === 'rect') {
-                        ctx.beginPath();
-                        ctx.rect(this.mouse.x - spellShape.w / 2, this.mouse.y - spellShape.h / 2, spellShape.w, spellShape.h);
-                        ctx.fill();
-                        ctx.stroke();
-                    }
+                // Reset Dash
+                ctx.setLineDash([]);
+                ctx.lineWidth = 1;
 
-                    // Reset Dash
+                // Center marker
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(this.mouse.x, this.mouse.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "black";
+                ctx.stroke();
+            } else {
+                // Normal Unit/Building Ghost
+                let range = c.rn || 0;
+                let radius = this.eng.getVisualRadius(c); // Use dynamic radius
+
+                // Draw Range Circle
+                if (range > 0) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.arc(this.mouse.x, this.mouse.y, range, 0, Math.PI * 2);
+                    ctx.stroke();
                     ctx.setLineDash([]);
                     ctx.lineWidth = 1;
-
-                    // Center marker
-                    ctx.fillStyle = "white";
-                    ctx.beginPath();
-                    ctx.arc(this.mouse.x, this.mouse.y, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = "black";
-                    ctx.stroke();
-                } else {
-                    // Normal Unit/Building Ghost
-                    let range = c.rn || 0;
-                    let radius = this.eng.getVisualRadius(c); // Use dynamic radius
-
-                    // Draw Range Circle
-                    if (range > 0) {
-                        ctx.beginPath();
-                        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-                        ctx.lineWidth = 2;
-                        ctx.setLineDash([5, 5]);
-                        ctx.arc(this.mouse.x, this.mouse.y, range, 0, Math.PI * 2);
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-                        ctx.lineWidth = 1;
-                    }
-
-                    // Draw Ghost Unit Body
-                    ctx.fillStyle = canAfford ? "#3296ff" : "#888"; // Blue if affordable, gray if not
-                    ctx.beginPath();
-                    ctx.arc(this.mouse.x, this.mouse.y, radius, 0, Math.PI * 2);
-                    ctx.fill();
                 }
-                ctx.globalAlpha = 1.0;
+
+                // Draw Ghost Unit Body
+                ctx.fillStyle = canAfford ? "#3296ff" : "#888"; // Blue if affordable, gray if not
+                ctx.beginPath();
+                ctx.arc(this.mouse.x, this.mouse.y, radius, 0, Math.PI * 2);
+                ctx.fill();
             }
+            ctx.globalAlpha = 1.0;
         }
 
         // Projectiles

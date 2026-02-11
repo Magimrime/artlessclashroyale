@@ -64,7 +64,7 @@ export default class Proj {
     asCurse() { this.isCurse = true; return this; }
     asRolling() { this.isRolling = true; this.life = 60; return this; }
 
-    asLog() { this.isLog = true; this.asRolling(); this.life = 120; return this; }
+    asLog() { this.isLog = true; this.asRolling(); this.life = 110; return this; }
     asBarbBarrelLog() { this.isLog = true; this.barbBarrelLog = true; this.asRolling(); return this; }
 
     upd(g) {
