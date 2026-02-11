@@ -77,7 +77,7 @@ export default class Proj {
             this.life--;
             if (this.life % 36 === 0) {
                 for (let e of g.ents) {
-                    if (e.tm !== this.tm && Math.hypot(this.x - e.x, this.y - e.y) < this.rad / 2.0) {
+                    if (e.tm !== this.tm && Math.hypot(this.x - e.x, this.y - e.y) < this.rad) {
                         e.hp -= Math.floor(this.dmg * 1.8);
                     }
                 }
@@ -89,7 +89,7 @@ export default class Proj {
             this.life--;
             if (this.life % 18 === 0) {
                 let angle = Math.random() * Math.PI * 2;
-                let dist = Math.sqrt(Math.random()) * (this.rad / 2.0);
+                let dist = Math.sqrt(Math.random()) * (this.rad);
                 g.ents.push(new Troop(this.tm, this.x + Math.cos(angle) * dist, this.y + Math.sin(angle) * dist, g.getCard("Skeletons")));
             }
             return;

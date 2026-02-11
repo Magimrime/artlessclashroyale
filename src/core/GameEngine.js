@@ -369,11 +369,9 @@ export default class GameEngine {
     }
 
     getSpellRadius(c) {
-        if (c.n === "Arrows") return { type: 'circle', val: 120 };
-        if (c.n === "Poison" || c.n === "Graveyard") return { type: 'circle', val: 110 };
-        if (c.n === "Freeze") return { type: 'circle', val: 100 };
+        if (c.n === "Arrows" || c.n === "Poison" || c.n === "Graveyard" || c.n === "Freeze") return { type: 'circle', val: 80 };
         if (c.n === "Vines") return { type: 'circle', val: 80 };
-        if (c.n === "Zap") return { type: 'circle', val: 65 };
+        if (c.n === "Zap") return { type: 'circle', val: 50 };
         if (c.n === "Fireball" || c.n === "Royal Delivery" || c.n === "Rocket" || c.n === "Giant Snowball") return { type: 'circle', val: 60 };
         if (c.n === "The Log") return { type: 'rect', w: 70, h: 20 }; // Visual approximation
         if (c.n === "Barbarian Barrel") return { type: 'rect', w: 44, h: 20 };

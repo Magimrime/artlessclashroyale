@@ -637,12 +637,10 @@ class Main {
                 ctx.fillStyle = "rgba(139, 69, 19, 0.6)";
             } else if (p.poison) {
                 ctx.fillStyle = "rgba(0, 128, 0, 0.4)";
-                let size = p.rad;
-                ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.fill();
             } else if (p.graveyard) {
                 ctx.fillStyle = "rgba(0, 0, 139, 0.4)";
-                let size = p.rad;
-                ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.fill();
             } else if (p.isLightBlue) {
                 ctx.fillStyle = "#64c8ff";
             } else if (p.isClone) {
