@@ -149,7 +149,7 @@ export default class EnemyAI {
                     if (c.t === 1 && c.hp > 1000) playY = 50;
                     else if (c.t === 1) playY = 400 - 60; // RIV_Y - 60
 
-                    if (this.g.isValid(playY, playX, c)) {
+                    if (this.g.isValid(playY, playX, c, 1)) {
                         this.playAI(c, playX, playY);
                         played = true;
                         break;

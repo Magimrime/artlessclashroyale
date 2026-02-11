@@ -76,6 +76,7 @@ class Main {
         this.noBtn = { x: 0, y: 0, w: 120, h: 50 };
         this.debugBtn = { x: 0, y: 0, w: 53, h: 26 };
         this.debugToggleBtn = { x: 0, y: 0, w: 200, h: 50 };
+        this.debugEnemyElixirBtn = { x: 0, y: 0, w: 200, h: 50 };
         this.enemyDeckBtn = { x: 0, y: 0, w: 200, h: 50 };
         this.cardRects = [];
         this.nextCardRect = { x: W - 60, y: H - 105, w: 60, h: 105 };
@@ -96,7 +97,8 @@ class Main {
         this.noBtn = { x: W / 2 + 10, y: H / 2, w: 120, h: 50 };
         this.debugBtn = { x: W - 59, y: 0, w: 53, h: 26 };
         this.debugToggleBtn = { x: W / 2 - 110, y: H / 2 - 60, w: 220, h: 50 };
-        this.enemyDeckBtn = { x: W / 2 - 110, y: H / 2 + 20, w: 220, h: 50 };
+        this.debugEnemyElixirBtn = { x: W / 2 - 110, y: H / 2, w: 220, h: 50 };
+        this.enemyDeckBtn = { x: W / 2 - 110, y: H / 2 + 60, w: 220, h: 50 };
         this.visitorCount = "...";
 
         // Fetch Visitor Count
@@ -237,7 +239,11 @@ class Main {
         } else if (this.state === State.DEBUG_MENU) {
             if (this.contains(this.debugToggleBtn, x, y)) {
                 this.eng.debugView = !this.eng.debugView;
+                this.eng.saveProgress();
                 // Troop.SHOW_PATH = this.eng.debugView; // Handle static via instance or global if needed
+            } else if (this.contains(this.debugEnemyElixirBtn, x, y)) {
+                this.eng.debugEnemyElixir = !this.eng.debugEnemyElixir;
+                this.eng.saveProgress();
             } else if (this.contains(this.enemyDeckBtn, x, y)) {
                 this.state = State.ENEMY_DECK;
                 this.scrollY = 0;
@@ -438,6 +444,7 @@ class Main {
             ctx.fillStyle = '#66BB6A';
             ctx.fillRect(0, 0, W, H);
             this.drawBtn(this.debugToggleBtn, "SHOW PATH/RANGE", this.eng.debugView ? "#32CD32" : "#FF6347");
+            this.drawBtn(this.debugEnemyElixirBtn, "SHOW OPP ELIXIR", this.eng.debugEnemyElixir ? "#32CD32" : "#FF6347");
             this.drawBtn(this.enemyDeckBtn, "BUILD ENEMY DECK", "#FFA500");
             this.drawBtn(this.backBtn, "BACK", "#FF6347");
             return;
@@ -624,14 +631,15 @@ class Main {
                 ctx.fillStyle = "rgba(0, 255, 255, 0.4)";
             } else if (p.isRolling) {
                 if (p.isLog) {
-                    ctx.fillStyle = "#8b4513"; // Brown
+                    if (p.tm === 1) ctx.fillStyle = "#8b0000"; // Dark Red for Enemy
+                    else ctx.fillStyle = "#8b4513"; // Brown for Player
                     // Render as rectangle
                     let w = p.barbBarrelLog ? 44 : 70;
                     let h = 20;
                     ctx.fillRect(p.x - w / 2, p.y - h / 2, w, h);
                     // ctx.strokeStyle = "black";
                     // ctx.strokeRect(p.x - w / 2, p.y - h / 2, w, h);
-                    continue; // Skip default circle render
+                    continue; // Skip default circle rendering
                 }
                 ctx.fillStyle = "#640096";
             } else {
@@ -775,6 +783,11 @@ class Main {
             }
             this.drawCenteredString(`${Math.floor(this.eng.p1.elx)}`, W / 2, H - 117, "bold 16px Arial", "white");
 
+            // Opponent Elixir (Debug/Cheat)
+            if (this.eng.debugEnemyElixir) {
+                this.drawCenteredString(`${Math.floor(this.eng.p2.elx)}`, 40, 30, "bold 20px Arial", "#D800D8");
+            }
+
             // Cards
             let cardPanelY = H - 100;
             for (let i = 0; i < 4; i++) {
@@ -835,7 +848,7 @@ class Main {
 
             // Timer / Messages
             let elapsed = Date.now() - this.eng.gameStart;
-            let remaining = Math.max(0, 300000 - elapsed);
+            let remaining = Math.max(0, 180000 - elapsed);
             let seconds = Math.floor(remaining / 1000);
             let min = Math.floor(seconds / 60);
             let sec = seconds % 60;
@@ -844,7 +857,7 @@ class Main {
             this.drawCenteredString(timeStr, W - 40, 30, "bold 20px Arial", remaining < 30000 ? "red" : "white");
 
             if (this.eng.isDoubleElixir) {
-                this.drawCenteredString("2x Elixir", 50, 30, "bold 20px Arial", "#c800c8");
+                this.drawCenteredString("2x Elixir", 120, 30, "bold 20px Arial", "#c800c8");
             }
 
             if (this.eng.doubleElixirAnim > 0) {

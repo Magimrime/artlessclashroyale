@@ -34,6 +34,7 @@ export default class GameEngine {
         this.gamesWon = 0;
         this.enemyDeckSelection = [];
         this.debugView = false;
+        this.debugEnemyElixir = false;
 
         this.allCards = [
             new Card("Knight", 3, 1000, 30, 1.5, 20, 0, 15, 60, 150, false, false),
@@ -175,6 +176,7 @@ export default class GameEngine {
             cheatPressed: this.cheatPressed,
             myDeck: this.myDeck.map(c => c.n),
             debugView: this.debugView,
+            debugEnemyElixir: this.debugEnemyElixir,
             enemyDeckSelection: this.enemyDeckSelection.map(c => c.n),
             unlockedCards: this.unlockedCards.map(c => c.n)
         };
@@ -218,6 +220,7 @@ export default class GameEngine {
         this.cheated = data.cheated || false;
         this.cheatPressed = data.cheatPressed || false; // New field
         this.debugView = data.debugView || false;
+        this.debugEnemyElixir = data.debugEnemyElixir || false;
 
         this.myDeck = [];
         if (data.myDeck) {
@@ -314,18 +317,41 @@ export default class GameEngine {
         this.ents.push(this.t2R);
     }
 
-    isValid(y, x, c) {
+    isValid(y, x, c, tm) {
         if (c.n === "The Log" || c.n === "Barbarian Barrel") {
-            // Log/BarbBarrel must be placed on player's side (roughly)
-            if (y < this.RIV_Y + 40) return false;
-            return true;
+            // Log/BarbBarrel must be placed on player's side (roughly) unless tower down
+            // P1 (tm=0) plays on bottom (y > RIV_Y), P2 (tm=1) plays on top (y < RIV_Y)
+
+            if (tm === 0) {
+                // Player Logic
+                if (this.t2L.hp <= 0 && x < this.W / 2 && y >= 200) return true; // Pocket Left
+                if (this.t2R.hp <= 0 && x > this.W / 2 && y >= 200) return true; // Pocket Right
+                if (y < this.RIV_Y + 40) return false;
+                return true;
+            } else {
+                // Enemy Logic
+                if (this.t1L.hp <= 0 && x < this.W / 2 && y <= this.H - 200) return true; // Pocket Left
+                if (this.t1R.hp <= 0 && x > this.W / 2 && y <= this.H - 200) return true; // Pocket Right
+                if (y > this.RIV_Y - 40) return false;
+                return true;
+            }
         }
         if (c.t === 2 || c.n === "Goblin Barrel") return true;
-        if (y >= this.RIV_Y + 40) return true;
-        if (c.t === 3 && y > this.RIV_Y - 40 && y < this.RIV_Y + 40) return false;
-        if (this.t2L && this.t2L.hp <= 0 && x < this.W / 2 && y >= 200) return true; // Updated to 200
-        if (this.t2R && this.t2R.hp <= 0 && x > this.W / 2 && y >= 200) return true; // Updated to 200
-        return false;
+
+        if (tm === 0) {
+            if (y >= this.RIV_Y + 40) return true;
+            if (c.t === 3 && y > this.RIV_Y - 40 && y < this.RIV_Y + 40) return false;
+            if (this.t2L && this.t2L.hp <= 0 && x < this.W / 2 && y >= 200) return true;
+            if (this.t2R && this.t2R.hp <= 0 && x > this.W / 2 && y >= 200) return true;
+            return false;
+        } else {
+            // Enemy placement
+            if (y <= this.RIV_Y - 40) return true;
+            if (c.t === 3 && y > this.RIV_Y - 40 && y < this.RIV_Y + 40) return false;
+            if (this.t1L && this.t1L.hp <= 0 && x < this.W / 2 && y <= this.H - 200) return true;
+            if (this.t1R && this.t1R.hp <= 0 && x > this.W / 2 && y <= this.H - 200) return true;
+            return false;
+        }
     }
 
     getHitboxRadius(e) {
@@ -387,7 +413,7 @@ export default class GameEngine {
             }
         }
 
-        if (!this.isValid(y, x, cardToPlay)) return;
+        if (!this.isValid(y, x, cardToPlay, 0)) return;
         this.p1.elx -= cost;
 
         // Apply Mirror Boost (5% HP/Dmg)
@@ -563,8 +589,8 @@ export default class GameEngine {
 
     upd() {
         let elapsed = Date.now() - this.gameStart;
-        let remaining = 300000 - elapsed;
-        if (remaining <= 120000 && !this.isDoubleElixir) {
+        let remaining = 180000 - elapsed; // 3 minutes
+        if (remaining <= 60000 && !this.isDoubleElixir) { // 1 minute left
             this.isDoubleElixir = true;
             this.doubleElixirAnim = 300;
         }
