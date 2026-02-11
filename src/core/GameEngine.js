@@ -81,7 +81,7 @@ export default class GameEngine {
             new Card("Sparky", 6, 2000, 1500, 0.8, 90, 0, 2000, 300, 150, false, false),
             new Card("Mirror", 1, 0, 0, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Clone", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Wall Breakers", 2, 230, 560, 2.0, 12, 1, 4, 60, 150, false, false),
+            new Card("Wall Breakers", 2, 230, 560, 4.0, 12, 1, 4, 60, 150, false, false),
             new Card("Royal Giant", 6, 3000, 390, 0.8, 120, 1, 500, 102, 200, false, false),
             new Card("Electro Giant", 7, 3000, 150, 0.8, 20, 1, 150, 90, 150, false, false),
             new Card("Bowler", 5, 2000, 200, 0.8, 100, 0, 180, 150, 150, false, false),
@@ -463,9 +463,9 @@ export default class GameEngine {
             let rad = shape && shape.type === 'circle' ? shape.val : 100;
             this.projs.push(new Proj(x, y, x, y, null, 0, true, rad, 0, tm, false).asGraveyard());
         } else if (c.n === "The Log") {
-            // Log rolls 10.1 tiles. 1 tile ~ 30px. 10.1 * 30 = 303px.
+            // Log rolls 20.2 tiles (Double). 1 tile ~ 30px. 20.2 * 30 = 606px.
             // Speed: 2.5x slower than 10 => 4.
-            let dist = 303;
+            let dist = 606;
             let ty = (tm === 0) ? y - dist : y + dist;
             let p = new Proj(x, y, x, ty, null, 2.66, false, 60, Math.floor(c.d * 0.8), tm, false).asLog();
             this.projs.push(p);
