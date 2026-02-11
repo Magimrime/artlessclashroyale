@@ -510,7 +510,7 @@ class Main {
         ctx.fillRect(W / 4 - 25, RIV_Y - 18, 50, 36);
         ctx.fillRect(W * 3 / 4 - 25, RIV_Y - 18, 50, 36);
 
-        if (this.state === State.PLAY && this.eng.sel && this.eng.sel.t !== 2) {
+        if (this.state === State.PLAY && this.eng.sel && (this.eng.sel.t !== 2 || ["The Log", "Barbarian Barrel"].includes(this.eng.sel.n))) {
             // Draw invalid area (red tint)
             ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
 
