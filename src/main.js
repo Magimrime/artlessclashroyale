@@ -876,9 +876,10 @@ class Main {
                     ctx.fillStyle = "rgba(0, 255, 255, 0.4)";
                 } else if (p.isIceNova) {
                     ctx.fillStyle = "rgba(135, 206, 250, 0.6)"; // Light Sky Blue
-                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad * (1 - p.life / 20), 0, Math.PI * 2); ctx.fill();
+                    // Instant size (no expansion animation)
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = "white";
-                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad * (1 - p.life / 20), 0, Math.PI * 2); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.stroke();
                 } else if (p.isRolling) {
                     if (p.isLog) {
                         if (p.tm === 1) ctx.fillStyle = "#8b0000"; // Dark Red for Enemy
@@ -1193,9 +1194,6 @@ class Main {
 
 
 
-        if (e.c && e.c.n === "Ice Golem") {
-            color = "#E0F7FA"; // Pale Cyan
-        }
 
         // Freeze/Slow effect
         if (e instanceof Troop) {

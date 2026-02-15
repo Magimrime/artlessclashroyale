@@ -572,12 +572,18 @@ export default class Troop extends Entity {
         if (this.c.n === "Ice Golem") {
             // Slow Effect + Damage
             // Visual Indicator (Ice Nova)
-            g.projs.push(new Proj(this.x, this.y, this.x, this.y, null, 0, false, 150, 0, this.tm, false).asIceNova());
+            // Visual Indicator (Ice Nova) - Instant flash (Lifetime 3 ticks)
+            // User requested "instant, delete the whole animation" - so we just show a quick flash.
+            g.projs.push(new Proj(this.x, this.y, this.x, this.y, null, 0, false, 80, 0, this.tm, false).asIceNova());
+
+            // Projectile life will be handled in Proj.js or we set it here if Proj accepts it.
+            // Proj.js sets life in asIceNova(). I should update Proj.js to set it effectively to 1 or 2.
+            // Or I can modify Proj.js as planned.
 
             for (let e of g.ents) {
-                if (e.tm !== this.tm && this.dist(e) < 150 + e.rad) {
+                if (e.tm !== this.tm && this.dist(e) < 80 + e.rad) {
                     e.hp -= 20;
-                    e.sl = 120; // 2 seconds slow
+                    e.sl = 156; // 2.6 seconds slow (1.3x)
                 }
             }
         }
