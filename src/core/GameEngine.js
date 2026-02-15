@@ -128,6 +128,25 @@ export default class GameEngine {
         });
 
         this.enemyAI = null;
+        this.isMultiplayer = false;
+    }
+
+    setMultiplayer(enabled) {
+        this.isMultiplayer = enabled;
+    }
+
+    spawnRemote(cardName, x, y, team) {
+        // Transform coordinates for local view
+        // Incoming (x, y) is from opponent's perspective (they are bottom 0..800 relative)
+        // Center of symmetry is y=400, x=270
+        // We map their y (Player Side) to our y (Enemy Side)
+        let rx = this.W - x;
+        let ry = 800 - y;
+
+        let card = this.getCard(cardName);
+        if (card) {
+            this.addU(1, card, rx, ry); // Always team 1 (Enemy) from our perspective
+        }
     }
 
     giveElixir(teamToGive, amount) {
@@ -636,7 +655,7 @@ export default class GameEngine {
         this.t1K.actv = (this.t1K.hp < this.t1K.mhp) || (this.t1L.hp <= 0) || (this.t1R.hp <= 0);
         this.t2K.actv = (this.t2K.hp < this.t2K.mhp) || (this.t2L.hp <= 0) || (this.t2R.hp <= 0);
 
-        if (this.enemyAI) this.enemyAI.update();
+        if (this.enemyAI && !this.isMultiplayer) this.enemyAI.update();
 
         // Stuck Push
         for (let e of this.ents) {

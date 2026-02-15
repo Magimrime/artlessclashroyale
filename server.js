@@ -28,9 +28,144 @@ const mimeTypes = {
     '.svg': 'application/image/svg+xml'
 };
 
+// --- MULTIPLAYER LOGIC ---
+const rooms = {}; // { code: { clients: [], lastAction: null } }
+
+function generateCode() {
+    let code;
+    do {
+        code = Math.floor(10000 + Math.random() * 90000).toString();
+    } while (rooms[code]);
+    return code;
+}
+
 const server = http.createServer((req, res) => {
+    // CORS headers for all responses
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
+
     console.log(`${req.method} ${req.url}`);
 
+    // --- API ROUTES ---
+
+    // Create Room
+    if (req.url === '/api/create' && req.method === 'POST') {
+        const code = generateCode();
+        rooms[code] = { clients: [] };
+        console.log(`Room created: ${code}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, code: code }));
+        return;
+    }
+
+    // Join Room (SSE)
+    if (req.url.startsWith('/api/join') && req.method === 'GET') {
+        const urlParams = new URL(req.url, `http://${req.headers.host}`).searchParams;
+        const code = urlParams.get('code');
+
+        if (!code || !rooms[code]) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, message: "Room not found" }));
+            return;
+        }
+
+        if (rooms[code].clients.length >= 2) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, message: "Room full" }));
+            return;
+        }
+
+        // SSE Setup
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+        });
+
+        const clientId = Date.now();
+        const newClient = {
+            id: clientId,
+            res: res
+        };
+        rooms[code].clients.push(newClient);
+
+        const playerIndex = rooms[code].clients.length - 1; // 0 or 1
+        console.log(`Client ${clientId} joined room ${code} as P${playerIndex}`);
+
+        // Notify client of their index logic could go here if needed, 
+        // but for now we just verify connection.
+        res.write(`data: ${JSON.stringify({ type: 'joined', playerIndex: playerIndex })}\n\n`);
+
+        // If 2 players, notify start
+        if (rooms[code].clients.length === 2) {
+            rooms[code].clients.forEach(c => {
+                c.res.write(`data: ${JSON.stringify({ type: 'start' })}\n\n`);
+            });
+        }
+
+        // Cleanup on close
+        req.on('close', () => {
+            console.log(`Client ${clientId} disconnected from room ${code}`);
+            if (rooms[code]) {
+                rooms[code].clients = rooms[code].clients.filter(c => c.id !== clientId);
+                if (rooms[code].clients.length === 0) {
+                    delete rooms[code];
+                    console.log(`Room ${code} deleted (empty)`);
+                } else {
+                    // Notify remaining player
+                    rooms[code].clients.forEach(c => {
+                        c.res.write(`data: ${JSON.stringify({ type: 'opponent_disconnected' })}\n\n`);
+                    });
+                }
+            }
+        });
+        return;
+    }
+
+    // Action (Spawn)
+    if (req.url === '/api/action' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                const code = data.code;
+
+                if (rooms[code]) {
+                    // Broadcast to ALL other clients in room
+                    rooms[code].clients.forEach(c => {
+                        // In a real app we might exclude sender, but simplistic logic is fine:
+                        // Front-end can ignore its own echoes if we send sender ID, 
+                        // OR we just broadcast and frontend handles logic.
+                        // Better: Exclude sender? 
+                        // Since we don't track sender easily without auth token, 
+                        // let's just broadcast to everyone and let frontend filter if needed.
+                        // actually, we can't easily filter sender without ID.
+                        // Let's send to all.
+                        c.res.write(`data: ${JSON.stringify({ type: 'action', data: data })}\n\n`);
+                    });
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true }));
+                } else {
+                    res.writeHead(404);
+                    res.end(JSON.stringify({ success: false, message: "Room not found" }));
+                }
+            } catch (e) {
+                res.writeHead(400);
+                res.end(JSON.stringify({ success: false, error: e.message }));
+            }
+        });
+        return;
+    }
+
+    // Save/Load API (Existing)
     if (req.url === '/api/save' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => {
