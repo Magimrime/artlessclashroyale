@@ -1026,7 +1026,15 @@ class Main {
                 for (let i = 1; i < 10; i++) {
                     ctx.beginPath(); ctx.moveTo(i * (W / 10), H - 130); ctx.lineTo(i * (W / 10), H - 105); ctx.stroke();
                 }
-                this.drawCenteredString(`${Math.floor(this.eng.p1.elx)}`, W / 2, H - 117, "bold 16px Arial", "white");
+                this.drawCenteredString(`${Math.floor(this.eng.p1.elx)}`, W / 2, H - 112, "bold 16px Arial", "white");
+
+                // Debug Opponent Elixir
+                if (this.eng.debugEnemyElixir) {
+                    ctx.fillStyle = "red";
+                    ctx.font = "bold 20px Arial";
+                    ctx.textAlign = "right";
+                    ctx.fillText(`OPP: ${Math.floor(this.eng.p2.elx)}`, W - 10, 60);
+                }
 
                 // Cards
                 for (let i = 0; i < 4; i++) {
