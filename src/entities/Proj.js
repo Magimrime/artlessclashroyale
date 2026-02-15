@@ -63,12 +63,13 @@ export default class Proj {
     asStun(duration = 30) { this.shouldStun = true; this.stunDuration = duration; return this; }
     asCurse() { this.isCurse = true; return this; }
     asRolling() { this.isRolling = true; this.life = 60; return this; }
+    asIceNova() { this.isIceNova = true; this.life = 20; return this; }
 
     asLog() { this.isLog = true; this.asRolling(); this.life = 110; return this; }
     asBarbBarrelLog() { this.isLog = true; this.barbBarrelLog = true; this.asRolling(); return this; }
 
     upd(g) {
-        if (this.chainTargets || this.barbBreak) {
+        if (this.chainTargets || this.barbBreak || this.isIceNova) {
             this.life--;
             return;
         }

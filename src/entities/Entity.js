@@ -18,6 +18,7 @@ export default class Entity {
         this.rt = 0; // root
         this.infernoTick = 0;
         this.stuckFrames = 0;
+        this.sl = 0; // slow timer
     }
 
     act(g) {

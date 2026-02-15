@@ -127,6 +127,11 @@ export default class Troop extends Entity {
 
         if (this.curseTime > 0) this.curseTime--;
 
+        if (this.curseTime > 0) this.curseTime--;
+        if (this.sl > 0) this.sl--;
+
+        let speedMult = (this.sl > 0) ? 0.65 : 1.0;
+
         if (["Zappies", "Sparky"].includes(this.c.n)) {
             let threshold = this.c.n === "Zappies" ? 72 : 180;
             if (this.chargeT < threshold) this.chargeT++;
@@ -523,8 +528,8 @@ export default class Troop extends Entity {
             }
 
             if (!this.atk) {
-                this.x += dx * this.c.s * (this.isCharging ? 2.0 : 1.0);
-                this.y += dy * this.c.s * (this.isCharging ? 2.0 : 1.0);
+                this.x += dx * this.c.s * (this.isCharging ? 2.0 : 1.0) * speedMult;
+                this.y += dy * this.c.s * (this.isCharging ? 2.0 : 1.0) * speedMult;
             }
 
             if (this.c.n === "Prince" || this.c.n === "Knight" || this.c.n === "Dark Prince") {
@@ -562,6 +567,19 @@ export default class Troop extends Entity {
         if (this.curseTime > 0) {
             let hogCard = g.getCard("Cursed Hog") || { n: "Cursed Hog", hp: 520, ms: 20, fl: false, ar: false };
             g.ents.push(new Troop(1 - this.tm, this.x, this.y, hogCard));
+        }
+
+        if (this.c.n === "Ice Golem") {
+            // Slow Effect + Damage
+            // Visual Indicator (Ice Nova)
+            g.projs.push(new Proj(this.x, this.y, this.x, this.y, null, 0, false, 150, 0, this.tm, false).asIceNova());
+
+            for (let e of g.ents) {
+                if (e.tm !== this.tm && this.dist(e) < 150 + e.rad) {
+                    e.hp -= 20;
+                    e.sl = 120; // 2 seconds slow
+                }
+            }
         }
     }
 

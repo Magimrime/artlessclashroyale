@@ -93,7 +93,8 @@ export default class GameEngine {
             new Card("Barbarian Barrel", 2, 0, 200, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Royal Recruits", 7, 500, 110, 1.5, 23, 0, 20, 78, 150, false, false),
             new Card("Dark Prince", 4, 1000, 200, 1.2, 20, 0, 120, 60, 150, false, false),
-            new Card("Crate", 2, 300, 0, 0, 0, 3, 1800, 0, 0, false, false)
+            new Card("Crate", 2, 300, 0, 0, 0, 3, 1800, 0, 0, false, false),
+            new Card("Ice Golem", 2, 1100, 70, 0.8, 12, 1, 150, 60, 150, false, false)
         ];
 
         // Apply Stat Adjustments

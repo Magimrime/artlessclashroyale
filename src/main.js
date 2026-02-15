@@ -874,6 +874,11 @@ class Main {
                     ctx.fillStyle = "#64c8ff";
                 } else if (p.isClone) {
                     ctx.fillStyle = "rgba(0, 255, 255, 0.4)";
+                } else if (p.isIceNova) {
+                    ctx.fillStyle = "rgba(135, 206, 250, 0.6)"; // Light Sky Blue
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad * (1 - p.life / 20), 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = "white";
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad * (1 - p.life / 20), 0, Math.PI * 2); ctx.stroke();
                 } else if (p.isRolling) {
                     if (p.isLog) {
                         if (p.tm === 1) ctx.fillStyle = "#8b0000"; // Dark Red for Enemy
@@ -1186,9 +1191,20 @@ class Main {
         let color = isFriend ? "#3296ff" : (e.isClone ? "cyan" : "#ff3232");
         if (e.isClone) color = isFriend ? "#32ffff" : "#ff32ff";
 
-        // Freeze effect
-        if (e instanceof Troop && e.fr > 0) {
-            color = "#add8e6"; // Light Blue
+
+
+        if (e.c && e.c.n === "Ice Golem") {
+            color = "#E0F7FA"; // Pale Cyan
+        }
+
+        // Freeze/Slow effect
+        if (e instanceof Troop) {
+            if (e.fr > 0) {
+                color = "#add8e6"; // Light Blue
+            } else if (e.sl > 0) {
+                // Blend with Light Sky Blue or just simple tint
+                color = "#87CEFA";
+            }
         }
 
         ctx.fillStyle = color;
