@@ -1213,10 +1213,27 @@ class Main {
             ctx.fillRect(x - barW / 2, y - radius - 10, barW * hpPct, 4);
         }
 
-        // Level / Name (Optional, simplified)
-        // ctx.fillStyle = "white";
-        // ctx.textAlign = "center";
-        // ctx.fillText("Lvl 9", x, y);
+        // Level / Name
+        // Level / Name
+        if (name && name.length > 0) {
+            let fontSize = Math.max(9, Math.min(13, 8 + radius * 0.4));
+            ctx.fillStyle = "rgba(255, 255, 255, 0.7)"; // Less visible
+            ctx.font = `${fontSize}px Arial`; // Simple Arial, no bold
+            ctx.textAlign = "center";
+
+            // Drop shadow for readability instead of heavy stroke
+            ctx.shadowColor = "black";
+            ctx.shadowBlur = 2;
+
+            let textY = y - radius - 20; // Above HP bar
+            if (e.hp >= e.mhp) textY = y - radius - 5; // Lower if no HP bar
+
+            ctx.fillText(name, x, textY);
+
+            // Reset shadow
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
+        }
     }
 
     drawBtn(rect, txt, color) {
