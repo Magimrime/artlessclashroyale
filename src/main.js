@@ -1063,7 +1063,6 @@ class Main {
                     this.drawCenteredString("Next:", nr.x + nr.w / 2, nr.y + 15, "10px Arial", "black");
                     this.drawCenteredString(nextC.n, nr.x + nr.w / 2, nr.y + nr.h / 2, "bold 9px Arial", "black");
                     // MOVED ELIXIR COST INWARD
-                    this.drawElixirCost(nr.x + 15, nr.y + 15, nextC.c);
                 }
 
                 // Timer / Messages
