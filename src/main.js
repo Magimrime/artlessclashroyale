@@ -754,14 +754,6 @@ class Main {
                 const sorted = [...this.eng.ents].sort((a, b) => a.y - b.y);
                 for (let e of sorted) {
                     this.drawEntityBody(e);
-                    // Draw HP bar if damaged
-                    if (e.hp < e.mhp) {
-                        let hpPct = e.hp / e.mhp;
-                        ctx.fillStyle = "red";
-                        ctx.fillRect(e.x - 15, e.y - e.rad - 10, 30, 4);
-                        ctx.fillStyle = "#32CD32";
-                        ctx.fillRect(e.x - 15, e.y - e.rad - 10, 30 * hpPct, 4);
-                    }
                 }
             }
 
@@ -1129,6 +1121,12 @@ class Main {
 
         // Visual Z-Index offset for flying
         if (e.fly) {
+            // Shadow (Higher up as requested)
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+            ctx.beginPath();
+            ctx.ellipse(e.x, e.y - 15, radius * 0.8, radius * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
             y -= 25;
             radius *= 1.1;
         }
