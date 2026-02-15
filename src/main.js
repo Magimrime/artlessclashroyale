@@ -901,7 +901,7 @@ class Main {
 
                 if (!p.fireArea && !p.poison && !p.graveyard) {
                     let size = p.rad * 2;
-                    if (!p.spl && !p.barrel && !p.redArea && !p.brownArea && !p.isHeal && !p.barbBreak && !p.isRolling) size = 8;
+                    if (!p.spl && !p.barrel && !p.redArea && !p.brownArea && !p.isHeal && !p.barbBreak && !p.isRolling && !p.isLightBlue) size = 8;
                     ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
                 }
 
@@ -1046,7 +1046,10 @@ class Main {
                         let isSel = this.eng.sel === c;
                         let canAfford = this.eng.p1.elx >= c.c;
 
-                        let paintY = r.y - (isSel ? 30 : 0) - hoverOff;
+                        // DISABLED POP UP ON SELECTION
+                        // let paintY = r.y - (isSel ? 30 : 0) - hoverOff;
+                        // Only hover effect, no selection offset
+                        let paintY = r.y - hoverOff;
 
                         ctx.fillStyle = canAfford ? "#fff" : "#888"; // Gray if can't afford
                         if (isSel) ctx.fillStyle = "#32CD32"; // Green if selected
@@ -1120,10 +1123,6 @@ class Main {
 
     drawEntityBody(e) {
 
-        let isFriend = (e.tm === 0);
-        let color = isFriend ? "#3296ff" : (e.isClone ? "cyan" : "#ff3232");
-        if (e.isClone) color = isFriend ? "#32ffff" : "#ff32ff";
-
         let x = e.x;
         let y = e.y;
         let radius = e.rad;
@@ -1146,12 +1145,50 @@ class Main {
             y -= jumpHeight;
         }
 
+        // Electric Aura (Blue, Flickering)
+        let name = e.c ? e.c.n : "";
+        if (name === "Sparky" || name === "Zappies") {
+            let threshold = (name === "Zappies") ? 72 : 180;
+            let isCharging = (e.chargeT > 0 && e.chargeT < threshold);
+            let isReady = (e.chargeT >= threshold);
+
+            if (isCharging) {
+                // Flicker while charging
+                let flick = (Math.floor(Date.now() / 50) % 2 === 0);
+                if (flick) {
+                    ctx.strokeStyle = "cyan";
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
+                }
+            } else if (isReady) {
+                // Solid ring when ready? User said "stop flickering".
+                // Detailed interpretation: "when it is done charging, it should stop flickering."
+                // I will leave it as NO aura when ready, or maybe a solid one.
+                // Let's go with SOLID to indicate readiness.
+                ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.lineWidth = 1;
+            }
+        }
+
+        let isFriend = (e.tm === 0);
+        let color = isFriend ? "#3296ff" : (e.isClone ? "cyan" : "#ff3232");
+        if (e.isClone) color = isFriend ? "#32ffff" : "#ff32ff";
+
         // Freeze effect
         if (e instanceof Troop && e.fr > 0) {
             color = "#add8e6"; // Light Blue
         }
 
         ctx.fillStyle = color;
+        ctx.strokeStyle = "black"; // RESET STROKE STYLE
+        ctx.lineWidth = 1;
         ctx.beginPath();
         if (e instanceof Tower) {
             // ROUNDED TOWER
