@@ -8,6 +8,8 @@ export default class MultiplayerManager {
         // Callbacks
         this.onJoined = null;
         this.onStart = null;
+        this.onStart = null;
+        this.onState = null; // New callback for state sync
         this.onAction = null;
         this.onOpponentDisconnected = null;
 
@@ -151,14 +153,18 @@ export default class MultiplayerManager {
         } else if (msg.type === 'error') {
             alert("Error: " + msg.message);
             this.close();
+        } else if (msg.type === 'state') {
+            if (this.onState) this.onState(msg.data);
         } else if (msg.type === 'spawn') {
             // Mirror actions
             // { type: 'spawn', cardName: '...', x: 100, y: 200, team: 0 }
-            // Receiver (Team 1) needs to see it as Team 1.
-            // But sender sent it as Team 0 (their perspective).
-            // Main.js/GameEngine.js handles the coordinate flip in `spawnRemote`.
-            // Here we just pass data.
             if (this.onAction) this.onAction(msg);
+        }
+    }
+
+    broadcastState(stateData) {
+        if (this.conn && this.conn.open) {
+            this.send({ type: 'state', data: stateData });
         }
     }
 

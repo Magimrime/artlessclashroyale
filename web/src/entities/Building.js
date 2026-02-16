@@ -6,7 +6,7 @@ export default class Building extends Entity {
     constructor(t, x, y, c) {
         let radius = (c.n === "Cannon") ? 15 : 20;
         if (c.n === "Crate") radius = 14;
-        super(t, x, y, c.hp, radius, 10000, false, false);
+        super(0, t, x, y, c.hp, radius, 10000, false, false);
         this.c = c;
         this.cd = 0;
         this.lk = null;

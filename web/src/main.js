@@ -184,13 +184,18 @@ class Main {
         // Setup MP Callbacks
         this.mp.onJoined = (idx) => {
             console.log("Joined as Player", idx);
+            this.mp.isHost = (idx === 0); // Assuming player 0 is host
         };
         this.mp.onStart = (seed) => {
             if (seed) this.eng.setSeed(seed);
             this.startMultiplayerGame();
         };
+        this.mp.onState = (data) => {
+            this.eng.importState(data, !this.mp.isHost);
+        };
         this.mp.onAction = (data) => {
-            if (data.type === 'spawn') {
+            // Host receives Spawn request
+            if (this.mp.isHost) {
                 this.eng.spawnRemote(data.cardName, data.x, data.y, data.team);
             }
         };
@@ -373,6 +378,8 @@ class Main {
                 let cardW = (W - (cols + 1) * margin) / cols;
                 let cardH = 60;
                 for (let i = 0; i < this.eng.allCards.length; i++) {
+                    let c = this.eng.allCards[i];
+                    let selected = this.eng.enemyDeckSelection.includes(c);
                     let row = Math.floor(i / cols);
                     let col = i % cols;
                     let cx = margin + col * (cardW + margin);
@@ -400,39 +407,26 @@ class Main {
                     }
                 }
             } else {
-                // If MP, broadcast spawn
-                if (this.eng.sel) {
-                    let playedName = this.eng.sel.n;
-                    // Check validity
-                    if (this.eng.isValid(y, x, this.eng.sel, 0)) {
-                        // Perform spawn locally
-                        // let success = this.eng.spawn(x, y); 
-                        // Note: spawn() returns undefined. It modifies state if successful.
-                        // We need to check if card was used.
-                        // But spawn() is complex. 
-                        // Better to check if sel became null, meaning it was used.
-                        // Wait, spawn() sets sel = null at the end.
+                let rx = x;
+                let ry = y;
 
-                        // Modified Spawn Logic needed? 
-                        // Actually spawn() manages logic. If I just call it, it works locally.
-                        // I need to intercept effective spawn.
-                        // For now, let's just assume valid if it passes check? No.
-                        // Let's rely on sel being cleared.
-                        // But `this.eng.spawn(x, y)` is called inside the `if` block above in original code.
-                        // I can't easily detect success without modifying `spawn`.
-                        // However, `spawn` logic checks cost, resets sel.
-
-                        // Let's hook into `spawn` or just replicate check?
-                        // Replicating check is safer.
+                if (this.eng.isMultiplayer && !this.mp.isHost) {
+                    // Client: Send Spawn Request
+                    // We need to verify validity locally purely for UI feedback? 
+                    // Or just send it.
+                    // NOTE: We used to call spawn() which checked elixir.
+                    // Client should probably predictively check elixir but for "simple mirror" asking host is safest.
+                    // But let's check elixir locally for responsiveness of UI (graying out etc)
+                    // Actually, just send it.
+                    if (this.eng.sel) {
+                        this.mp.sendSpawn(this.eng.sel.n, rx, ry, 0); // Sent as Team 0 (My perspective)
+                        // We clear selection locally for UI feedback?
+                        // Maybe wait for next state update to see if elixir dropped.
+                        this.eng.sel = null;
                     }
-                }
-
-                // Call orginal spawn
-                let prevSel = this.eng.sel;
-                this.eng.spawn(x, y);
-                if (prevSel && !this.eng.sel && this.eng.isMultiplayer) {
-                    // Spawn occurred
-                    this.mp.sendSpawn(prevSel.n, x, y, 0);
+                } else {
+                    // Host or Singleplayer
+                    this.eng.spawn(rx, ry);
                 }
             }
         } else if (this.state === State.OVER && this.contains(this.exitBtn, x, y)) {
@@ -457,6 +451,11 @@ class Main {
     }
 
     loop() {
+        requestAnimationFrame(() => this.loop());
+
+        // Update TWEEN
+        // TWEEN.update();
+
         // Hide loading screen on first successful loop
         const loader = document.getElementById('loading-overlay');
         if (loader && loader.style.opacity !== '0') {
@@ -488,13 +487,22 @@ class Main {
         }
 
         if (this.state === State.PLAY) {
-            this.eng.upd();
+            // Host Authoritative Loop
+            if (this.eng.isMultiplayer && !this.mp.isHost) {
+                // Client: Do nothing, just render state imported via onState
+            } else {
+                // Host or Singleplayer: Run simulation
+                this.eng.upd();
+                // If Host, broadcast
+                if (this.eng.isMultiplayer && this.mp.isHost && this.eng.aiTick % 3 === 0) { // Broadcast every 3 ticks (~50ms)
+                    this.mp.broadcastState(this.eng.exportState());
+                }
+            }
             if (this.eng.over) {
                 this.state = State.OVER;
             }
         }
         this.render();
-        requestAnimationFrame(() => this.loop());
     }
 
     render() {

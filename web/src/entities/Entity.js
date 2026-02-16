@@ -1,5 +1,6 @@
 export default class Entity {
-    constructor(t, x, y, h, r, m, fly, air) {
+    constructor(id, t, x, y, h, r, m, fly, air) {
+        this.id = id;
         this.tm = t;
         this.x = x;
         this.y = y;

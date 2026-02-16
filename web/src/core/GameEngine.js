@@ -14,6 +14,7 @@ export default class GameEngine {
         this.RIV_Y = 400;
 
         this.seed = 12345; // Default seed
+        this.nextEntityId = 1;
 
         this.p1 = null;
         this.p2 = null;
@@ -148,6 +149,132 @@ export default class GameEngine {
         t = Math.imul(t ^ (t >>> 15), t | 1);
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+
+    exportState() {
+        return {
+            t: this.aiTick,
+            el1: this.p1.elixir,
+            el2: this.p2.elixir,
+            ents: this.ents.map(e => ({
+                id: e.id,
+                n: e.c ? e.c.n : (e.constructor.name), // Name or Class
+                x: Math.round(e.x),
+                y: Math.round(e.y),
+                hp: Math.round(e.hp),
+                mhp: e.mhp,
+                tm: e.tm,
+                // Add specific visual flags if needed
+                st: e.st,
+                fr: e.fr,
+                rt: e.rt
+            }))
+        };
+    }
+
+    importState(data, flip) {
+        this.aiTick = data.t;
+
+        if (flip) {
+            this.p1.elx = data.el2;
+            this.p2.elx = data.el1;
+        } else {
+            this.p1.elx = data.el1;
+            this.p2.elx = data.el2;
+        }
+
+        const serverIds = new Set();
+
+        data.ents.forEach(sEnt => {
+            serverIds.add(sEnt.id);
+            let local = this.ents.find(e => e.id === sEnt.id);
+
+            let tx = sEnt.x;
+            let ty = sEnt.y;
+            let tm = sEnt.tm;
+
+            if (flip) {
+                tx = this.W - tx;
+                ty = 800 - ty;
+                tm = 1 - tm;
+            }
+
+            if (local) {
+                // Update
+                local.x = tx;
+                local.y = ty;
+                local.hp = sEnt.hp;
+                local.tm = tm; // Should be constant but ensures sync
+                local.st = sEnt.st;
+                local.fr = sEnt.fr;
+                local.rt = sEnt.rt;
+            } else {
+                // Create
+                if (sEnt.n === "Tower") {
+                    // Towers should exist. If new tower (impossible?), ignore or recreate.
+                    // But we might need to sync their state if they were destroyed/respawned? 
+                    // Towers are persistent. We just find the matching tower by pos?
+                    // IDs should match if we assign them well. 
+                    // But we generated IDs on Host. Client Towers have local IDs (0,1,2...).
+                    // If Host IDs differ, we won't find them in `local`.
+                    // We need to map Towers initially?
+                    // Or just treat them as generic entities.
+                    // If local not found, create it?
+                    // Towers are special.
+                    // Let's assume for now we might create duplicate towers if we don't handle this.
+                    // Fix: Check for existing tower at approx pos? 
+                    // Or Map existing towers to Server IDs on first sync?
+
+                    // Simple hack: If we find a tower at `tx, ty` that doesn't have a correct ID, adopt it?
+                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - tx, e.y - ty) < 10);
+                    if (existing) {
+                        existing.id = sEnt.id; // Adopt ID
+                        existing.hp = sEnt.hp;
+                        // update other props
+                    } else {
+                        // Create new Tower
+                        // Not ideal but works for sync
+                    }
+                } else {
+                    let c = this.getCard(sEnt.n);
+                    if (c) {
+                        let t = new Troop(tm, tx, ty, c);
+                        t.id = sEnt.id;
+                        t.hp = sEnt.hp;
+                        t.mhp = sEnt.mhp;
+                        this.ents.push(t);
+                    } else if (sEnt.n === "Building") {
+                        // Generic building sync if needed
+                    }
+                }
+            }
+        });
+
+        // Remove dead/missing
+        this.ents = this.ents.filter(e => {
+            // Keep persistent local ents if expected? No, Host is authority.
+            // If Host says it's gone, it's gone.
+
+            // Exception: Towers. If we haven't mapped them yet?
+            // "Adopt ID" logic above helps.
+            // But what if Server ID is 1, Local Tower has 0.
+            // We map 0 -> 1.
+            // Next frame we check ID 1. Found.
+            // Any entity NOT in serverIds is removed.
+            // Essential for death sync.
+            // But we must ensure Towers are mapped! 
+            // If they aren't mapped, they get deleted!
+
+            if (e instanceof Tower && !serverIds.has(e.id)) {
+                // Dangerous!
+                return true; // Keep unmapped towers? 
+                // No, if they are destroyed they should be removed?
+                // Towers persist even at 0 HP usually (ruins).
+                // Our logic: `t.hp` goes to 0 but entity remains.
+                // So Host continues to send it.
+            }
+            return serverIds.has(e.id);
+        });
     }
 
     spawnRemote(cardName, x, y, team) {
@@ -622,6 +749,11 @@ export default class GameEngine {
     }
 
     upd() {
+        // Assign IDs to any new entities
+        for (let e of this.ents) {
+            if (!e.id) e.id = this.nextEntityId++;
+        }
+
         let elapsed = Date.now() - this.gameStart;
         let remaining = 180000 - elapsed; // 3 minutes
         if (remaining <= 60000 && !this.isDoubleElixir) { // 1 minute left

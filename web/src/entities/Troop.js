@@ -29,7 +29,7 @@ export default class Troop extends Entity {
 
         // Parent constructor calls this.hp = h, which invokes the setter.
         // We need _hp to be set there.
-        super(t, x, y, c.hp, mass, mass, c.fl, c.ar);
+        super(0, t, x, y, c.hp, mass, mass, c.fl, c.ar);
 
         this.c = c;
         this.tags = c.tags || [];
