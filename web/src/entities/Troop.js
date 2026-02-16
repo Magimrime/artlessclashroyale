@@ -32,6 +32,7 @@ export default class Troop extends Entity {
         super(t, x, y, c.hp, mass, mass, c.fl, c.ar);
 
         this.c = c;
+        this.tags = c.tags || [];
         this.cd = 0;
         this.jt = null;
         this.jd = 0;
@@ -125,6 +126,11 @@ export default class Troop extends Entity {
         }
 
         if (this.curseTime > 0) this.curseTime--;
+
+        if (this.curseTime > 0) this.curseTime--;
+        if (this.sl > 0) this.sl--;
+
+        let speedMult = (this.sl > 0) ? 0.65 : 1.0;
 
         if (["Zappies", "Sparky"].includes(this.c.n)) {
             let threshold = this.c.n === "Zappies" ? 72 : 180;
@@ -522,8 +528,8 @@ export default class Troop extends Entity {
             }
 
             if (!this.atk) {
-                this.x += dx * this.c.s * (this.isCharging ? 2.0 : 1.0);
-                this.y += dy * this.c.s * (this.isCharging ? 2.0 : 1.0);
+                this.x += dx * this.c.s * (this.isCharging ? 2.0 : 1.0) * speedMult;
+                this.y += dy * this.c.s * (this.isCharging ? 2.0 : 1.0) * speedMult;
             }
 
             if (this.c.n === "Prince" || this.c.n === "Knight" || this.c.n === "Dark Prince") {
@@ -561,6 +567,25 @@ export default class Troop extends Entity {
         if (this.curseTime > 0) {
             let hogCard = g.getCard("Cursed Hog") || { n: "Cursed Hog", hp: 520, ms: 20, fl: false, ar: false };
             g.ents.push(new Troop(1 - this.tm, this.x, this.y, hogCard));
+        }
+
+        if (this.c.n === "Ice Golem") {
+            // Slow Effect + Damage
+            // Visual Indicator (Ice Nova)
+            // Visual Indicator (Ice Nova) - Instant flash (Lifetime 3 ticks)
+            // User requested "instant, delete the whole animation" - so we just show a quick flash.
+            g.projs.push(new Proj(this.x, this.y, this.x, this.y, null, 0, false, 80, 0, this.tm, false).asIceNova());
+
+            // Projectile life will be handled in Proj.js or we set it here if Proj accepts it.
+            // Proj.js sets life in asIceNova(). I should update Proj.js to set it effectively to 1 or 2.
+            // Or I can modify Proj.js as planned.
+
+            for (let e of g.ents) {
+                if (e.tm !== this.tm && this.dist(e) < 80 + e.rad) {
+                    e.hp -= 20;
+                    e.sl = 156; // 2.6 seconds slow (1.3x)
+                }
+            }
         }
     }
 

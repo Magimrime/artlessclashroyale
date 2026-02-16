@@ -63,12 +63,13 @@ export default class Proj {
     asStun(duration = 30) { this.shouldStun = true; this.stunDuration = duration; return this; }
     asCurse() { this.isCurse = true; return this; }
     asRolling() { this.isRolling = true; this.life = 60; return this; }
+    asIceNova() { this.isIceNova = true; this.life = 5; return this; }
 
-    asLog() { this.isLog = true; this.asRolling(); return this; }
+    asLog() { this.isLog = true; this.asRolling(); this.life = 110; return this; }
     asBarbBarrelLog() { this.isLog = true; this.barbBarrelLog = true; this.asRolling(); return this; }
 
     upd(g) {
-        if (this.chainTargets || this.barbBreak) {
+        if (this.chainTargets || this.barbBreak || this.isIceNova) {
             this.life--;
             return;
         }
@@ -77,7 +78,7 @@ export default class Proj {
             this.life--;
             if (this.life % 36 === 0) {
                 for (let e of g.ents) {
-                    if (e.tm !== this.tm && Math.hypot(this.x - e.x, this.y - e.y) < this.rad / 2.0) {
+                    if (e.tm !== this.tm && Math.hypot(this.x - e.x, this.y - e.y) < this.rad) {
                         e.hp -= Math.floor(this.dmg * 1.8);
                     }
                 }
@@ -89,7 +90,7 @@ export default class Proj {
             this.life--;
             if (this.life % 18 === 0) {
                 let angle = Math.random() * Math.PI * 2;
-                let dist = Math.sqrt(Math.random()) * (this.rad / 2.0);
+                let dist = Math.sqrt(Math.random()) * (this.rad);
                 g.ents.push(new Troop(this.tm, this.x + Math.cos(angle) * dist, this.y + Math.sin(angle) * dist, g.getCard("Skeletons")));
             }
             return;
@@ -155,7 +156,7 @@ export default class Proj {
             this.y += Math.sin(a) * this.spd;
             if (d < this.spd) {
                 this.life = 0;
-                let gob = new Card("Goblins", 0, 90, 100, 2.5, 20, 0, 3, 60, 200, false, false);
+                let gob = g.getCard("Goblins") || new Card("Goblins", 0, 90, 100, 1.7, 12, 0, 2, 60, 200, false, false);
                 g.ents.push(new Troop(this.tm, this.x, this.y, gob));
                 g.ents.push(new Troop(this.tm, this.x - 10, this.y + 10, gob));
                 g.ents.push(new Troop(this.tm, this.x + 10, this.y + 10, gob));

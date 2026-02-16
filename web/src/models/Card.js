@@ -1,5 +1,5 @@
 export default class Card {
-    constructor(n, c, h, d, s, r, t, m, rt, si, f, a) {
+    constructor(n, c, h, d, s, r, t, m, rt, si, f, a, tags = []) {
         this.n = n;   // name
         this.c = c;   // cost
         this.hp = h;  // health
@@ -12,5 +12,6 @@ export default class Card {
         this.si = si; // sight range / size
         this.fl = f;  // flying
         this.ar = a;  // air targeting
+        this.tags = tags;
     }
 }

@@ -2,6 +2,7 @@ import GameEngine from './core/GameEngine.js';
 import Troop from './entities/Troop.js';
 import Tower from './entities/Tower.js';
 import Building from './entities/Building.js';
+import MultiplayerManager from './multiplayer/MultiplayerManager.js';
 
 
 // --- DEBUG ERROR HANDLER ---
@@ -46,7 +47,10 @@ const State = {
     CHEAT: 'CHEAT',
     RESUME_PROMPT: 'RESUME_PROMPT',
     DEBUG_MENU: 'DEBUG_MENU',
-    ENEMY_DECK: 'ENEMY_DECK'
+    ENEMY_DECK: 'ENEMY_DECK',
+    MP_MENU: 'MP_MENU',
+    MP_HOST: 'MP_HOST',
+    MP_JOIN: 'MP_JOIN'
 };
 
 class Main {
@@ -55,6 +59,7 @@ class Main {
         this.t0 = 0;
         this.scrollY = 0;
         this.eng = new GameEngine();
+        this.mp = new MultiplayerManager();
 
         this.scale = 1.0;
         this.xOffset = 0;
@@ -67,6 +72,7 @@ class Main {
         // UI Rects
         this.playBtn = { x: 0, y: 0, w: 120, h: 50 };
         this.deckBtn = { x: 0, y: 0, w: 120, h: 50 };
+        this.mpBtn = { x: 0, y: 0, w: 120, h: 50 }; // MP Button
         this.exitBtn = { x: 0, y: 0, w: 120, h: 50 };
         this.backBtn = { x: 0, y: 0, w: 120, h: 50 };
         this.continueBtn = { x: 0, y: 0, w: 120, h: 50 };
@@ -76,7 +82,15 @@ class Main {
         this.noBtn = { x: 0, y: 0, w: 120, h: 50 };
         this.debugBtn = { x: 0, y: 0, w: 53, h: 26 };
         this.debugToggleBtn = { x: 0, y: 0, w: 200, h: 50 };
+        this.debugEnemyElixirBtn = { x: 0, y: 0, w: 200, h: 50 };
         this.enemyDeckBtn = { x: 0, y: 0, w: 200, h: 50 };
+
+        // MP UI
+        this.makeGameBtn = { x: 0, y: 0, w: 200, h: 60 };
+        this.joinGameBtn = { x: 0, y: 0, w: 200, h: 60 };
+        this.codeInputs = []; // Rects for 5 digits (for join)
+        this.enteredCode = "";
+
         this.cardRects = [];
         this.nextCardRect = { x: W - 60, y: H - 105, w: 60, h: 105 };
         this.cardOffsets = [0, 0, 0, 0]; // For hover animation
@@ -85,8 +99,9 @@ class Main {
     }
 
     init() {
-        this.playBtn = { x: W / 2 - 60, y: H / 2 + 40 - 120, w: 120, h: 50 };
-        this.deckBtn = { x: W / 2 - 60, y: H / 2 + 100 - 120, w: 120, h: 50 };
+        this.playBtn = { x: W / 2 - 60, y: H / 2 + 40 - 150, w: 120, h: 50 };
+        this.deckBtn = { x: W / 2 - 60, y: H / 2 + 100 - 150, w: 120, h: 50 };
+        this.mpBtn = { x: W / 2 - 60, y: H / 2 + 160 - 150, w: 120, h: 50 };
         this.exitBtn = { x: W / 2 - 60, y: H / 2 + 40 - 120 + 100, w: 120, h: 50 };
         this.backBtn = { x: W / 2 - 60, y: H - 120, w: 120, h: 50 };
         this.continueBtn = { x: W / 2 - 60, y: H - 120, w: 120, h: 50 };
@@ -96,7 +111,12 @@ class Main {
         this.noBtn = { x: W / 2 + 10, y: H / 2, w: 120, h: 50 };
         this.debugBtn = { x: W - 59, y: 0, w: 53, h: 26 };
         this.debugToggleBtn = { x: W / 2 - 110, y: H / 2 - 60, w: 220, h: 50 };
-        this.enemyDeckBtn = { x: W / 2 - 110, y: H / 2 + 20, w: 220, h: 50 };
+        this.debugEnemyElixirBtn = { x: W / 2 - 110, y: H / 2, w: 220, h: 50 };
+        this.enemyDeckBtn = { x: W / 2 - 110, y: H / 2 + 60, w: 220, h: 50 };
+
+        this.makeGameBtn = { x: W / 2 - 100, y: H / 2 - 50, w: 200, h: 60 };
+        this.joinGameBtn = { x: W / 2 - 100, y: H / 2 + 30, w: 200, h: 60 };
+
         this.visitorCount = "...";
 
         // Fetch Visitor Count
@@ -140,13 +160,81 @@ class Main {
             }
         });
 
+        // Key Listener for Code Entry (Simple version)
+        window.addEventListener('keydown', (e) => {
+            if (this.state === State.MP_JOIN) {
+                if (e.key >= '0' && e.key <= '9') {
+                    if (this.enteredCode.length < 5) this.enteredCode += e.key;
+                } else if (e.key === 'Backspace') {
+                    this.enteredCode = this.enteredCode.slice(0, -1);
+                } else if (e.key === 'Enter') {
+                    if (this.enteredCode.length === 5) {
+                        this.joinGame(this.enteredCode);
+                    }
+                }
+            }
+        });
+
         if (this.eng.hasSaveFile()) {
             this.state = State.RESUME_PROMPT;
         } else {
             this.eng.initCollection();
         }
 
+        // Setup MP Callbacks
+        this.mp.onJoined = (idx) => {
+            console.log("Joined as Player", idx);
+        };
+        this.mp.onStart = () => {
+            this.startMultiplayerGame();
+        };
+        this.mp.onAction = (data) => {
+            if (data.type === 'spawn') {
+                this.eng.spawnRemote(data.cardName, data.x, data.y, data.team);
+            }
+        };
+        this.mp.onOpponentDisconnected = () => {
+            alert("Opponent Disconnected!");
+            this.state = State.TITLE;
+            this.eng.setMultiplayer(false);
+            this.eng.reset();
+            this.mp.close();
+        };
+
         requestAnimationFrame(() => this.loop());
+    }
+
+    joinGame(code) {
+        this.mp.joinGame(code, (success, msg) => {
+            if (!success) {
+                alert(msg || "Failed to join");
+                this.enteredCode = "";
+            } else {
+                // Waiting for start...
+            }
+        });
+    }
+
+    createGame() {
+        this.mp.createGame((success, msg) => {
+            if (!success) {
+                alert("Failed to create game: " + msg);
+                this.state = State.MP_MENU;
+            }
+        });
+    }
+
+    startMultiplayerGame() {
+        this.eng.setMultiplayer(true);
+        this.eng.reset(); // Resets game, but keeps MP flag if we set it after? No, reset() clears ents.
+        this.eng.setMultiplayer(true); // Ensure it's set
+
+        // Disable Debug in MP
+        this.eng.debugView = false;
+        this.eng.debugEnemyElixir = false;
+
+        this.state = State.CNT;
+        this.t0 = Date.now();
     }
 
     resize() {
@@ -185,12 +273,16 @@ class Main {
         } else if (this.state === State.TITLE) {
             if (this.contains(this.playBtn, x, y)) {
                 if (this.eng.myDeck.length === 8) {
+                    this.eng.setMultiplayer(false); // Single player
                     this.state = State.CNT;
                     this.t0 = Date.now();
                     this.eng.reset();
                 }
             } else if (this.contains(this.deckBtn, x, y)) {
                 this.state = State.DECK;
+            } else if (this.contains(this.mpBtn, x, y)) {
+                this.enteredCode = "";
+                this.state = State.MP_MENU;
             } else if (!this.eng.cheatPressed && x > W - 53 && y < 26) {
                 this.eng.cheatPressed = true;
                 this.eng.saveProgress();
@@ -198,6 +290,27 @@ class Main {
             } else if (this.eng.cheated && x > W - 53 && y < 26) {
                 this.state = State.DEBUG_MENU;
             }
+        } else if (this.state === State.MP_MENU) {
+            if (this.contains(this.backBtn, x, y)) {
+                this.state = State.TITLE;
+            } else if (this.contains(this.makeGameBtn, x, y)) {
+                this.state = State.MP_HOST;
+                this.createGame();
+            } else if (this.contains(this.joinGameBtn, x, y)) {
+                this.enteredCode = "";
+                this.state = State.MP_JOIN;
+            }
+        } else if (this.state === State.MP_HOST) {
+            if (this.contains(this.backBtn, x, y)) {
+                this.mp.close();
+                this.state = State.MP_MENU;
+            }
+        } else if (this.state === State.MP_JOIN) {
+            if (this.contains(this.backBtn, x, y)) {
+                this.mp.close();
+                this.state = State.MP_MENU;
+            }
+            // Code input handled by keydown, but maybe touch controls later?
         } else if (this.state === State.CHEAT) {
             if (this.contains(this.yesBtn, x, y)) {
                 this.eng.unlockAllCards();
@@ -210,6 +323,7 @@ class Main {
                 this.state = State.TITLE;
             }
         } else if (this.state === State.DECK) {
+            // ... (Deck logic unchanged)
             if (this.contains(this.backBtn, x, y)) {
                 this.state = State.TITLE;
                 this.scrollY = 0;
@@ -235,9 +349,13 @@ class Main {
                 }
             }
         } else if (this.state === State.DEBUG_MENU) {
+            // (Unchanged debug render)
             if (this.contains(this.debugToggleBtn, x, y)) {
                 this.eng.debugView = !this.eng.debugView;
-                // Troop.SHOW_PATH = this.eng.debugView; // Handle static via instance or global if needed
+                this.eng.saveProgress();
+            } else if (this.contains(this.debugEnemyElixirBtn, x, y)) {
+                this.eng.debugEnemyElixir = !this.eng.debugEnemyElixir;
+                this.eng.saveProgress();
             } else if (this.contains(this.enemyDeckBtn, x, y)) {
                 this.state = State.ENEMY_DECK;
                 this.scrollY = 0;
@@ -245,6 +363,7 @@ class Main {
                 this.state = State.TITLE;
             }
         } else if (this.state === State.ENEMY_DECK) {
+            // ... (Enemy Deck logic unchanged)
             if (this.contains(this.backBtn, x, y)) {
                 this.state = State.DEBUG_MENU;
             } else {
@@ -280,10 +399,47 @@ class Main {
                     }
                 }
             } else {
+                // If MP, broadcast spawn
+                if (this.eng.sel) {
+                    let playedName = this.eng.sel.n;
+                    // Check validity
+                    if (this.eng.isValid(y, x, this.eng.sel, 0)) {
+                        // Perform spawn locally
+                        // let success = this.eng.spawn(x, y); 
+                        // Note: spawn() returns undefined. It modifies state if successful.
+                        // We need to check if card was used.
+                        // But spawn() is complex. 
+                        // Better to check if sel became null, meaning it was used.
+                        // Wait, spawn() sets sel = null at the end.
+
+                        // Modified Spawn Logic needed? 
+                        // Actually spawn() manages logic. If I just call it, it works locally.
+                        // I need to intercept effective spawn.
+                        // For now, let's just assume valid if it passes check? No.
+                        // Let's rely on sel being cleared.
+                        // But `this.eng.spawn(x, y)` is called inside the `if` block above in original code.
+                        // I can't easily detect success without modifying `spawn`.
+                        // However, `spawn` logic checks cost, resets sel.
+
+                        // Let's hook into `spawn` or just replicate check?
+                        // Replicating check is safer.
+                    }
+                }
+
+                // Call orginal spawn
+                let prevSel = this.eng.sel;
                 this.eng.spawn(x, y);
+                if (prevSel && !this.eng.sel && this.eng.isMultiplayer) {
+                    // Spawn occurred
+                    this.mp.sendSpawn(prevSel.n, x, y, 0);
+                }
             }
         } else if (this.state === State.OVER && this.contains(this.exitBtn, x, y)) {
-            if (this.eng.win === 0) {
+            if (this.eng.isMultiplayer) {
+                this.mp.close();
+                this.eng.setMultiplayer(false);
+            }
+            if (this.eng.win === 0 && !this.eng.isMultiplayer) {
                 let newC = this.eng.unlockRandomCard();
                 if (newC) {
                     this.justUnlocked = newC;
@@ -308,10 +464,13 @@ class Main {
         }
 
         const now = Date.now();
-        if (this.state === State.CNT && now - this.t0 > 3000) {
-            this.state = State.PLAY;
-            this.eng.gameStart = now;
+        if (this.state === State.CNT) {
+            if (now - this.t0 > 3000) {
+                this.state = State.PLAY;
+                this.eng.gameStart = now;
+            }
         }
+
 
         // Update Card Hover Animations
         if (this.state === State.PLAY) {
@@ -361,7 +520,7 @@ class Main {
             ctx.fillText(`${this.visitorCount}`, 10, 20);
             ctx.textAlign = "center";
 
-            this.drawCenteredString("Clash Clone", W / 2, H / 2 - 50 - 120, "bold 40px Arial", "#006400");
+            this.drawCenteredString("Clash Clone", W / 2, H / 2 - 50 - 150, "bold 40px Arial", "#006400");
 
             let validDeck = this.eng.myDeck.length === 8;
             this.drawBtn(this.playBtn, "PLAY", validDeck ? "#32CD32" : "gray");
@@ -369,6 +528,7 @@ class Main {
                 this.drawCenteredString("Build a deck of 8 cards!", W / 2, this.playBtn.y - 10, "12px Arial", "red");
             }
             this.drawBtn(this.deckBtn, "DECK", "#FFA500");
+            this.drawBtn(this.mpBtn, "MULTIPLAYER", "#3296ff");
 
             this.drawCenteredString(`Cards Unlocked: ${this.eng.unlockedCards.length}/${this.eng.allCards.length}`, W / 2, H - 150 - 120, "italic 14px Arial", "#2E8B57");
             this.drawCenteredString(`Wins: ${this.eng.gamesWon} | Matches: ${this.eng.gamesPlayed}`, W / 2, H - 130 - 120, "italic 14px Arial", "#2E8B57");
@@ -387,6 +547,59 @@ class Main {
             return;
         }
 
+        if (this.state === State.MP_MENU) {
+            ctx.fillStyle = '#66BB6A';
+            ctx.fillRect(0, 0, W, H);
+
+            this.drawCenteredString("MULTIPLAYER", W / 2, 100, "bold 40px Arial", "white");
+
+            this.drawBtn(this.makeGameBtn, "MAKE GAME", "#3296ff");
+            this.drawBtn(this.joinGameBtn, "JOIN GAME", "#FFA500");
+
+            this.drawBtn(this.backBtn, "BACK", "#FF6347");
+            // Red warning note
+            ctx.fillStyle = "red";
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("NOTE: DEBUG FEATURES DISABLED IN MULTIPLAYER", W / 2, H - 20);
+            return;
+        }
+
+        if (this.state === State.MP_HOST) {
+            ctx.fillStyle = '#66BB6A';
+            ctx.fillRect(0, 0, W, H);
+
+            this.drawCenteredString("Waiting for opponent...", W / 2, H / 2 - 100, "24px Arial", "white");
+
+            if (this.mp.code) {
+                this.drawCenteredString(`CODE: ${this.mp.code}`, W / 2, H / 2, "bold 60px Arial", "white");
+            } else {
+                this.drawCenteredString(`Generating Code...`, W / 2, H / 2, "italic 20px Arial", "#eee");
+            }
+
+            this.drawBtn(this.backBtn, "CANCEL", "#FF6347");
+            return;
+        }
+
+        if (this.state === State.MP_JOIN) {
+            ctx.fillStyle = '#66BB6A';
+            ctx.fillRect(0, 0, W, H);
+
+            this.drawCenteredString("ENTER CODE:", W / 2, H / 2 - 100, "bold 30px Arial", "white");
+
+            // Draw Code Digits
+            let codeStr = this.enteredCode;
+            ctx.font = "bold 50px Courier New";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.fillText(codeStr.padEnd(5, '_').split('').join(' '), W / 2, H / 2);
+
+            this.drawCenteredString("Type digits on keyboard. Press Enter to Join.", W / 2, H / 2 + 60, "14px Arial", "#eee");
+
+            this.drawBtn(this.backBtn, "BACK", "#FF6347");
+            return;
+        }
+
         if (this.state === State.CHEAT) {
             ctx.fillStyle = "rgba(0,0,0,0.8)";
             ctx.fillRect(0, 0, W, H);
@@ -397,6 +610,7 @@ class Main {
         }
 
         if (this.state === State.DECK) {
+            // (Unchanged deck render)
             ctx.fillStyle = "#e0f0e0";
             ctx.fillRect(0, 0, W, H);
             let cols = 3;
@@ -435,15 +649,18 @@ class Main {
         }
 
         if (this.state === State.DEBUG_MENU) {
+            // (Unchanged debug render)
             ctx.fillStyle = '#66BB6A';
             ctx.fillRect(0, 0, W, H);
             this.drawBtn(this.debugToggleBtn, "SHOW PATH/RANGE", this.eng.debugView ? "#32CD32" : "#FF6347");
+            this.drawBtn(this.debugEnemyElixirBtn, "SHOW OPP ELIXIR", this.eng.debugEnemyElixir ? "#32CD32" : "#FF6347");
             this.drawBtn(this.enemyDeckBtn, "BUILD ENEMY DECK", "#FFA500");
             this.drawBtn(this.backBtn, "BACK", "#FF6347");
             return;
         }
 
         if (this.state === State.ENEMY_DECK) {
+            // (Unchanged enemy deck render)
             ctx.fillStyle = "#282828";
             ctx.fillRect(0, 0, W, H);
             let cols = 3;
@@ -476,6 +693,7 @@ class Main {
         }
 
         if (this.state === State.NEW_CARD) {
+            // (Unchanged new card render)
             ctx.fillStyle = "#e0f0e0";
             ctx.fillRect(0, 0, W, H);
             this.drawCenteredString("NEW CARD", W / 2, 150, "bold 30px Arial", "#006400");
@@ -503,25 +721,44 @@ class Main {
         ctx.fillRect(W / 4 - 25, RIV_Y - 18, 50, 36);
         ctx.fillRect(W * 3 / 4 - 25, RIV_Y - 18, 50, 36);
 
-        if (this.state === State.PLAY && this.eng.sel && this.eng.sel.t !== 2) {
-            // Draw invalid area (red tint)
-            ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
+        // GAMEPLAY RENDER
+        ctx.fillStyle = "#3296ff";
+        ctx.fillRect(0, RIV_Y - 15, W, 30);
+        ctx.fillStyle = "#8b4513";
+        ctx.fillRect(W / 4 - 25, RIV_Y - 18, 50, 36);
+        ctx.fillRect(W * 3 / 4 - 25, RIV_Y - 18, 50, 36);
 
-            // Top Half (Always invalid) - Area behind towers/King
-            ctx.fillRect(0, 0, W, 200); // Updated to 200
+        // Render Game during COUNTDOWN (CNT) or PLAY
+        if (this.state === State.PLAY || this.state === State.CNT) {
+            if (this.eng.sel && (this.eng.sel.t !== 2 || ["The Log", "Barbarian Barrel"].includes(this.eng.sel.n))) {
+                // Draw invalid area (red tint)
+                ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
 
-            // Bottom Left Enemy Side (Invalid if Left Tower alive)
-            if (this.eng.t2L && this.eng.t2L.hp > 0) {
-                ctx.fillRect(0, 200, W / 2, RIV_Y - 200); // Updated start to 200
-            }
+                // Top Half (Always invalid) - Area behind towers/King
+                ctx.fillRect(0, 0, W, 200); // Updated to 200
 
-            // Bottom Right Enemy Side (Invalid if Right Tower alive)
-            if (this.eng.t2R && this.eng.t2R.hp > 0) {
-                ctx.fillRect(W / 2, 200, W / 2, RIV_Y - 200); // Updated start to 200
+                // Bottom Left Enemy Side (Invalid if Left Tower alive)
+                if (this.eng.t2L && this.eng.t2L.hp > 0) {
+                    ctx.fillRect(0, 200, W / 2, RIV_Y - 200); // Updated start to 200
+                }
+
+                // Bottom Right Enemy Side (Invalid if Right Tower alive)
+                if (this.eng.t2R && this.eng.t2R.hp > 0) {
+                    ctx.fillRect(W / 2, 200, W / 2, RIV_Y - 200); // Updated start to 200
+                }
+            } // Close Invalid Area Logic
+
+            // --- RENDER ENTITIES ---
+            if (this.eng.ents) {
+                // Sort by Y for simple depth buffering
+                const sorted = [...this.eng.ents].sort((a, b) => a.y - b.y);
+                for (let e of sorted) {
+                    this.drawEntityBody(e);
+                }
             }
 
             // HOVER PREVIEW (Ghost Unit & Range)
-            if (this.eng.sel && this.mouse.y < H - 120) {
+            if ((this.state === State.PLAY || this.state === State.CNT) && this.eng.sel && this.mouse.y < H - 120) {
                 let c = this.eng.sel;
                 let spellShape = this.eng.getSpellRadius(c);
                 let canAfford = this.eng.p1.elx >= c.c;
@@ -537,7 +774,25 @@ class Main {
                     ctx.setLineDash([10, 10]);
                     ctx.lineDashOffset = -time; // Animate march
 
-                    if (spellShape.type === 'circle') {
+                    if (["The Log", "Barbarian Barrel"].includes(c.n)) {
+                        // Draw Arrow for rolling spells
+                        let dist = (c.n === "The Log") ? 280 : 101;
+                        let ey = this.mouse.y - dist;
+                        ctx.beginPath();
+                        ctx.moveTo(this.mouse.x, this.mouse.y);
+                        ctx.lineTo(this.mouse.x, ey);
+
+                        // Arrowhead
+                        ctx.lineTo(this.mouse.x - 10, ey + 15);
+                        ctx.moveTo(this.mouse.x, ey);
+                        ctx.lineTo(this.mouse.x + 10, ey + 15);
+                        ctx.stroke();
+
+                        // Also fill rect for body width
+                        let w = (c.n === "The Log") ? 70 : 44;
+                        ctx.fillStyle = canAfford ? "rgba(255, 255, 255, 0.2)" : "rgba(100, 100, 100, 0.2)";
+                        ctx.fillRect(this.mouse.x - w / 2, ey, w, dist);
+                    } else if (spellShape.type === 'circle') {
                         ctx.beginPath();
                         ctx.arc(this.mouse.x, this.mouse.y, spellShape.val, 0, Math.PI * 2);
                         ctx.fill();
@@ -585,441 +840,486 @@ class Main {
                 }
                 ctx.globalAlpha = 1.0;
             }
-        }
 
-        // Projectiles
-        for (let p of this.eng.projs) {
-            if (p.barrel) {
-                ctx.fillStyle = "#643200";
-            } else if (p.fireArea) {
-                let size = p.rad * 2;
-                if (p.isGray) {
-                    ctx.fillStyle = "rgba(100, 100, 100, 0.7)";
-                    ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = "lightgray";
-                    ctx.beginPath(); ctx.arc(p.x, p.y, size / 4, 0, Math.PI * 2); ctx.fill();
+            // Projectiles
+            for (let p of this.eng.projs) {
+                if (p.barrel) {
+                    ctx.fillStyle = "#643200";
+                } else if (p.fireArea) {
+                    let size = p.rad * 2;
+                    if (p.isGray) {
+                        ctx.fillStyle = "rgba(100, 100, 100, 0.7)";
+                        ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = "lightgray";
+                        ctx.beginPath(); ctx.arc(p.x, p.y, size / 4, 0, Math.PI * 2); ctx.fill();
+                    } else {
+                        ctx.fillStyle = "rgba(255, 69, 0, 0.7)";
+                        ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = "yellow";
+                        ctx.beginPath(); ctx.arc(p.x, p.y, size / 4, 0, Math.PI * 2); ctx.fill();
+                    }
+                } else if (p.isHeal) {
+                    ctx.fillStyle = "rgba(0, 255, 0, 0.6)";
+                } else if (p.redArea) {
+                    ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
+                } else if (p.brownArea) {
+                    ctx.fillStyle = "rgba(139, 69, 19, 0.6)";
+                } else if (p.poison) {
+                    ctx.fillStyle = "rgba(0, 128, 0, 0.4)";
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.fill();
+                } else if (p.graveyard) {
+                    ctx.fillStyle = "rgba(0, 0, 139, 0.4)";
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.fill();
+                } else if (p.isLightBlue) {
+                    ctx.fillStyle = "#64c8ff";
+                } else if (p.isClone) {
+                    ctx.fillStyle = "rgba(0, 255, 255, 0.4)";
+                } else if (p.isIceNova) {
+                    ctx.fillStyle = "rgba(135, 206, 250, 0.6)"; // Light Sky Blue
+                    // Instant size (no expansion animation)
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = "white";
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2); ctx.stroke();
+                } else if (p.isRolling) {
+                    if (p.isLog) {
+                        if (p.tm === 1) ctx.fillStyle = "#8b0000"; // Dark Red for Enemy
+                        else ctx.fillStyle = "#8b4513"; // Brown for Player
+                        // Render as rectangle
+                        let w = p.barbBarrelLog ? 44 : 70;
+                        let h = 20;
+                        ctx.fillRect(p.x - w / 2, p.y - h / 2, w, h);
+                        // ctx.strokeStyle = "black";
+                        // ctx.strokeRect(p.x - w / 2, p.y - h / 2, w, h);
+                        continue; // Skip default circle rendering
+                    }
+                    ctx.fillStyle = "#640096";
                 } else {
-                    ctx.fillStyle = "rgba(255, 69, 0, 0.7)";
+                    ctx.fillStyle = p.spl ? (p.rad < 10 ? "cyan" : "orange") : "lightgray";
+                }
+
+                if (!p.fireArea && !p.poison && !p.graveyard) {
+                    let size = p.rad * 2;
+                    if (!p.spl && !p.barrel && !p.redArea && !p.brownArea && !p.isHeal && !p.barbBreak && !p.isRolling && !p.isLightBlue) size = 8;
                     ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = "yellow";
-                    ctx.beginPath(); ctx.arc(p.x, p.y, size / 4, 0, Math.PI * 2); ctx.fill();
                 }
-            } else if (p.isHeal) {
-                ctx.fillStyle = "rgba(0, 255, 0, 0.6)";
-            } else if (p.redArea) {
-                ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
-            } else if (p.brownArea) {
-                ctx.fillStyle = "rgba(139, 69, 19, 0.6)";
-            } else if (p.poison) {
-                ctx.fillStyle = "rgba(0, 128, 0, 0.4)";
-                let size = p.rad;
-                ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
-            } else if (p.graveyard) {
-                ctx.fillStyle = "rgba(0, 0, 139, 0.4)";
-                let size = p.rad;
-                ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
-            } else if (p.isLightBlue) {
-                ctx.fillStyle = "#64c8ff";
-            } else if (p.isClone) {
-                ctx.fillStyle = "rgba(0, 255, 255, 0.4)";
-            } else if (p.isRolling) {
-                if (p.isLog) {
-                    ctx.fillStyle = "#8b4513"; // Brown
-                    // Render as rectangle
-                    let w = p.barbBarrelLog ? 44 : 70;
-                    let h = 20;
-                    ctx.fillRect(p.x - w / 2, p.y - h / 2, w, h);
-                    // ctx.strokeStyle = "black";
-                    // ctx.strokeRect(p.x - w / 2, p.y - h / 2, w, h);
-                    continue; // Skip default circle render
+
+                if (p.chainTargets) {
+                    ctx.strokeStyle = "cyan";
+                    ctx.beginPath();
+                    for (let i = 0; i < p.chainTargets.length - 1; i++) {
+                        let e1 = p.chainTargets[i];
+                        let e2 = p.chainTargets[i + 1];
+                        if (e1 && e2) {
+                            ctx.moveTo(e1.x, e1.y);
+                            ctx.lineTo(e2.x, e2.y);
+                        }
+                    }
+                    ctx.stroke();
                 }
-                ctx.fillStyle = "#640096";
-            } else {
-                ctx.fillStyle = p.spl ? (p.rad < 10 ? "cyan" : "orange") : "lightgray";
             }
 
-            if (!p.fireArea && !p.poison && !p.graveyard) {
-                let size = p.rad * 2;
-                if (!p.spl && !p.barrel && !p.redArea && !p.brownArea && !p.isHeal && !p.barbBreak && !p.isRolling) size = 8;
-                ctx.beginPath(); ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2); ctx.fill();
-            }
-
-            if (p.chainTargets) {
-                ctx.strokeStyle = "cyan";
-                ctx.beginPath();
-                for (let i = 0; i < p.chainTargets.length - 1; i++) {
-                    let e1 = p.chainTargets[i];
-                    let e2 = p.chainTargets[i + 1];
-                    if (e1 && e2) {
-                        ctx.moveTo(e1.x, e1.y);
-                        ctx.lineTo(e2.x, e2.y);
+            // Entities (Shadows/Effects first)
+            for (let e of this.eng.ents) {
+                if (e instanceof Troop) {
+                    if (e.chargeT > 0) {
+                        ctx.fillStyle = `rgba(100, 200, 255, ${0.6 + 0.2 * Math.sin(e.chargeT * 0.2)})`;
+                        let r = e.rad + 5;
+                        ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
+                    }
+                    if (e.c.n === "Electro Giant") {
+                        ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
+                        // Match the logical radius: (rad + 10) * 2.0 approx
+                        let r = (e.rad + 10) * 2.0;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
+                        ctx.lineWidth = 1;
                     }
                 }
-                ctx.stroke();
-            }
-        }
 
-        // Entities (Shadows/Effects first)
-        for (let e of this.eng.ents) {
-            if (e instanceof Troop) {
-                if (e.chargeT > 0) {
-                    ctx.fillStyle = `rgba(100, 200, 255, ${0.6 + 0.2 * Math.sin(e.chargeT * 0.2)})`;
-                    let r = e.rad + 5;
-                    ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
+                // Inferno Beams
+                let isInferno = false;
+                let target = null;
+                let ticks = e.infernoTick;
+
+                if (e instanceof Troop && e.c.n === "Inferno Dragon" && e.atk) {
+                    isInferno = true; target = e.lk;
+                } else if (e instanceof Building && e.c.n === "Inferno Tower" && e.atk) {
+                    isInferno = true; target = e.lk;
                 }
-                if (e.c.n === "Electro Giant") {
-                    ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
-                    // Match the logical radius: (rad + 10) * 2.0 approx
-                    let r = (e.rad + 10) * 2.0;
+
+                if (isInferno && target) {
+                    let width = 2 + (ticks / 20.0);
+                    if (width > 8) width = 8;
+                    ctx.lineWidth = width;
+                    let green = Math.max(0, 165 - ticks);
+                    ctx.strokeStyle = `rgb(255, ${green}, 0)`;
+                    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(target.x, target.y); ctx.stroke();
+                    ctx.lineWidth = 1;
+                }
+
+                // Shadows
+                if (e.fly || (e instanceof Troop && e.jp)) {
+                    let visualR = e.rad;
+                    let shadowOffset = 20;
+                    if (e instanceof Troop && e.jp && e.jt) {
+                        let totalDist = e.jd;
+                        let currentDist = e.dist(e.jt);
+                        let progress = 1.0 - (currentDist / totalDist);
+                        let jumpHeight = 50.0 * Math.sin(progress * Math.PI);
+                        shadowOffset = jumpHeight + 10;
+                    }
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+                    ctx.beginPath(); ctx.arc(e.x, e.y + shadowOffset, visualR, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            // Debug Path
+            if (this.eng.debugView) {
+                ctx.strokeStyle = "white";
+                for (let e of this.eng.ents) {
+                    if (e instanceof Troop && e.path.length > 0) {
+                        ctx.beginPath();
+                        let prevX = e.x, prevY = e.y;
+                        for (let p of e.path) {
+                            ctx.moveTo(prevX, prevY);
+                            ctx.lineTo(p.x, p.y);
+                            prevX = p.x; prevY = p.y;
+                        }
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw Entities
+            for (let e of this.eng.ents) if (!e.fly) this.drawEntityBody(e);
+            for (let e of this.eng.ents) if (e.fly) this.drawEntityBody(e);
+
+            // Status Effects
+            for (let e of this.eng.ents) {
+                if (e instanceof Troop && e.curseTime > 0) {
+                    ctx.fillStyle = "rgba(128, 0, 128, 0.4)";
+                    let r = e.rad + 5;
+                    ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = "magenta";
                     ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
                     ctx.lineWidth = 1;
                 }
             }
 
-            // Inferno Beams
-            let isInferno = false;
-            let target = null;
-            let ticks = e.infernoTick;
-
-            if (e instanceof Troop && e.c.n === "Inferno Dragon" && e.atk) {
-                isInferno = true; target = e.lk;
-            } else if (e instanceof Building && e.c.n === "Inferno Tower" && e.atk) {
-                isInferno = true; target = e.lk;
-            }
-
-            if (isInferno && target) {
-                let width = 2 + (ticks / 20.0);
-                if (width > 8) width = 8;
-                ctx.lineWidth = width;
-                let green = Math.max(0, 165 - ticks);
-                ctx.strokeStyle = `rgb(255, ${green}, 0)`;
-                ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(target.x, target.y); ctx.stroke();
-                ctx.lineWidth = 1;
-            }
-
-            // Shadows
-            if (e.fly || (e instanceof Troop && e.jp)) {
-                let visualR = e.rad;
-                let shadowOffset = 20;
-                if (e instanceof Troop && e.jp && e.jt) {
-                    let totalDist = e.jd;
-                    let currentDist = e.dist(e.jt);
-                    let progress = 1.0 - (currentDist / totalDist);
-                    let jumpHeight = 50.0 * Math.sin(progress * Math.PI);
-                    shadowOffset = jumpHeight + 10;
-                }
-                ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-                ctx.beginPath(); ctx.arc(e.x, e.y + shadowOffset, visualR, 0, Math.PI * 2); ctx.fill();
-            }
-        }
-
-        // Debug Path
-        if (this.eng.debugView) {
-            ctx.strokeStyle = "white";
-            for (let e of this.eng.ents) {
-                if (e instanceof Troop && e.path.length > 0) {
-                    ctx.beginPath();
-                    let prevX = e.x, prevY = e.y;
-                    for (let p of e.path) {
-                        ctx.moveTo(prevX, prevY);
-                        ctx.lineTo(p.x, p.y);
-                        prevX = p.x; prevY = p.y;
+            if (this.eng.debugView) {
+                ctx.strokeStyle = "rgba(255, 255, 0, 0.2)";
+                for (let e of this.eng.ents) {
+                    if (e instanceof Troop) {
+                        let r = e.sightRange;
+                        ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
+                        ctx.strokeStyle = "rgba(255, 165, 0, 0.6)";
+                        let ar = e.c.rn;
+                        if (ar > 0) { ctx.beginPath(); ctx.arc(e.x, e.y, ar, 0, Math.PI * 2); ctx.stroke(); }
                     }
-                    ctx.stroke();
                 }
             }
-        }
 
-        // Draw Entities
-        for (let e of this.eng.ents) if (!e.fly) this.drawEntityBody(e);
-        for (let e of this.eng.ents) if (e.fly) this.drawEntityBody(e);
-
-        // Status Effects
-        for (let e of this.eng.ents) {
-            if (e instanceof Troop && e.curseTime > 0) {
-                ctx.fillStyle = "rgba(128, 0, 128, 0.4)";
-                let r = e.rad + 5;
-                ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = "magenta";
-                ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
-                ctx.lineWidth = 1;
-            }
-        }
-
-        if (this.eng.debugView) {
-            ctx.strokeStyle = "rgba(255, 255, 0, 0.2)";
-            for (let e of this.eng.ents) {
-                if (e instanceof Troop) {
-                    let r = e.sightRange;
-                    ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
-                    ctx.strokeStyle = "rgba(255, 165, 0, 0.6)";
-                    let ar = e.c.rn;
-                    if (ar > 0) { ctx.beginPath(); ctx.arc(e.x, e.y, ar, 0, Math.PI * 2); ctx.stroke(); }
+            // Gameplay UI
+            if (this.state === State.PLAY || this.state === State.CNT) {
+                // Elixir Bar
+                ctx.fillStyle = "#333";
+                ctx.fillRect(0, H - 130, W, 25);
+                ctx.fillStyle = "#c800c8";
+                ctx.fillRect(0, H - 130, W * (this.eng.p1.elx / 10.0), 25);
+                ctx.strokeStyle = "white";
+                ctx.strokeRect(0, H - 130, W, 25);
+                for (let i = 1; i < 10; i++) {
+                    ctx.beginPath(); ctx.moveTo(i * (W / 10), H - 130); ctx.lineTo(i * (W / 10), H - 105); ctx.stroke();
                 }
-            }
-        }
+                this.drawCenteredString(`${Math.floor(this.eng.p1.elx)}`, W / 2, H - 112, "bold 16px Arial", "white");
 
-        // Gameplay UI
-        if (this.state === State.PLAY) {
-            // Elixir Bar
-            ctx.fillStyle = "#333";
-            ctx.fillRect(0, H - 130, W, 25);
-            ctx.fillStyle = "#c800c8";
-            ctx.fillRect(0, H - 130, W * (this.eng.p1.elx / 10.0), 25);
-            ctx.strokeStyle = "white";
-            ctx.strokeRect(0, H - 130, W, 25);
-            for (let i = 1; i < 10; i++) {
-                ctx.beginPath(); ctx.moveTo(i * (W / 10), H - 130); ctx.lineTo(i * (W / 10), H - 105); ctx.stroke();
-            }
-            this.drawCenteredString(`${Math.floor(this.eng.p1.elx)}`, W / 2, H - 117, "bold 16px Arial", "white");
+                // Debug Opponent Elixir
+                if (this.eng.debugEnemyElixir) {
+                    ctx.fillStyle = "red";
+                    ctx.font = "bold 20px Arial";
+                    ctx.textAlign = "right";
+                    ctx.fillText(`OPP: ${Math.floor(this.eng.p2.elx)}`, W - 10, 60);
+                }
 
-            // Cards
-            let cardPanelY = H - 100;
-            for (let i = 0; i < 4; i++) {
-                if (i < this.eng.p1.h.length) {
-                    let c = this.eng.p1.h[i];
-                    let rect = this.cardRects[i];
-                    let offset = this.cardOffsets[i];
-                    let drawY = rect.y - offset;
-                    let selected = this.eng.sel === c;
+                // Cards
+                for (let i = 0; i < 4; i++) {
+                    if (i < this.eng.p1.h.length) {
+                        let c = this.eng.p1.h[i];
+                        let r = this.cardRects[i];
+                        let hoverOff = this.cardOffsets[i] || 0;
 
-                    // Shadow (only when lifted or generally for depth)
-                    ctx.fillStyle = "rgba(0,0,0,0.3)";
-                    this.drawRoundRect(rect.x + 4, drawY + 4, rect.w, rect.h, 10, true, false);
+                        let isSel = this.eng.sel === c;
+                        let canAfford = this.eng.p1.elx >= c.c;
 
-                    // Card Background
-                    ctx.fillStyle = selected ? "#81C784" : (this.eng.p1.elx >= c.c ? "white" : "#D3D3D3");
-                    this.drawRoundRect(rect.x, drawY, rect.w, rect.h, 10, true, true);
+                        // DISABLED POP UP ON SELECTION
+                        // let paintY = r.y - (isSel ? 30 : 0) - hoverOff;
+                        // Only hover effect, no selection offset
+                        let paintY = r.y - hoverOff;
 
-                    // Name
-                    this.drawCenteredString(c.n, rect.x + rect.w / 2, drawY + rect.h / 2, "bold 11px Arial", "black");
+                        ctx.fillStyle = canAfford ? "#fff" : "#888"; // Gray if can't afford
+                        if (isSel) ctx.fillStyle = "#32CD32"; // Green if selected
 
-                    if (c.n === "Mirror" && this.eng.p1.lastPlayedCard) {
-                        this.drawCenteredString(`(${this.eng.p1.lastPlayedCard.n})`, rect.x + rect.w / 2, drawY + rect.h / 2 + 12, "bold 10px Arial", "black");
+                        this.drawRoundRect(r.x, paintY, r.w, r.h, 5, true, true);
+                        // Image/Text
+                        this.drawCenteredString(c.n, r.x + r.w / 2, paintY + r.h / 2, "bold 10px Arial", "black");
+                        // MOVED ELIXIR COST INWARD
+                        this.drawElixirCost(r.x + 15, paintY + 15, c.c);
+                    }
+                }
+
+                // Next Card
+                if (this.eng.p1.pile.length > 0) {
+                    let nextC = this.eng.p1.pile[0];
+                    let nr = this.nextCardRect;
+                    ctx.fillStyle = "#ccc";
+                    this.drawRoundRect(nr.x, nr.y, nr.w, nr.h, 5, true, true);
+                    this.drawCenteredString("Next:", nr.x + nr.w / 2, nr.y + 15, "10px Arial", "black");
+                    this.drawCenteredString(nextC.n, nr.x + nr.w / 2, nr.y + nr.h / 2, "bold 9px Arial", "black");
+                    // MOVED ELIXIR COST INWARD
+                }
+
+                // Timer / Messages
+                if (this.state === State.CNT) {
+                    // COUNTDOWN OVERLAY
+                    let elapsed = Date.now() - this.t0;
+                    let count = 3 - Math.floor(elapsed / 1000);
+                    if (count > 0) {
+                        ctx.fillStyle = "rgba(0,0,0,0.5)";
+                        ctx.fillRect(0, 0, W, H);
+                        this.drawCenteredString(count.toString(), W / 2, H / 2, "bold 100px Arial", "white");
+                    }
+                } else {
+                    let time = (Date.now() - this.eng.gameStart) / 1000;
+                    let remaining = 180 - time;
+                    if (remaining < 0) remaining = 0; // Overtime handled by state
+                    if (this.eng.tiebreaker) {
+                        this.drawCenteredString("TIEBREAKER!", W / 2, H / 2, "bold 40px Arial", "red");
                     }
 
-                    // Elixir Cost
-                    this.drawElixirCost(rect.x + 8, drawY + 8, c.c);
+                    if (this.eng.doubleElixirAnim > 0) {
+                        ctx.globalAlpha = this.eng.doubleElixirAnim / 100;
+                        this.drawCenteredString("2x ELIXIR", W / 2, H / 2, "bold 50px Arial", "magenta");
+                        ctx.globalAlpha = 1.0;
+                    }
+
+                    let mins = Math.floor(remaining / 60);
+                    let secs = Math.floor(remaining % 60);
+                    let timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                    ctx.fillStyle = (remaining <= 10 && remaining % 1 > 0.5) ? "red" : "black"; // Blink effect
+                    if (this.eng.tiebreaker) ctx.fillStyle = "red";
+                    ctx.font = "bold 20px Arial";
+                    ctx.fillText(timeStr, W - 40, 30);
                 }
             }
 
-            // Next Card
-            if (this.eng.p1.pile.length > 0) {
-                let nextC = this.eng.p1.pile[0];
-                // Next Card Background
-                ctx.fillStyle = "#222";
-                ctx.fillRect(this.nextCardRect.x, this.nextCardRect.y, this.nextCardRect.w, this.nextCardRect.h);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = "#000";
-                ctx.strokeRect(this.nextCardRect.x, this.nextCardRect.y, this.nextCardRect.w, this.nextCardRect.h);
-                ctx.lineWidth = 1;
 
-                this.drawCenteredString("Next", this.nextCardRect.x + this.nextCardRect.w / 2, this.nextCardRect.y + 12, "bold 10px Arial", "white");
-
-                // Mini Card
-                let margin = 8;
-                let cw = this.nextCardRect.w - margin * 2;
-                let ch = (cw * 1.33);
-                let yStart = this.nextCardRect.y + 25;
-
-                ctx.fillStyle = "white"; // White background
-                ctx.fillRect(this.nextCardRect.x + margin, yStart, cw, ch);
-                ctx.strokeStyle = "black";
-                ctx.strokeRect(this.nextCardRect.x + margin, yStart, cw, ch);
-
-                this.drawCenteredString(nextC.n, this.nextCardRect.x + this.nextCardRect.w / 2, yStart + ch + 10, "bold 9px Arial", "white");
-                this.drawElixirCost(this.nextCardRect.x + margin + 5, yStart + 5, nextC.c);
-            }
-
-            // Timer / Messages
-            let elapsed = Date.now() - this.eng.gameStart;
-            let remaining = Math.max(0, 300000 - elapsed);
-            let seconds = Math.floor(remaining / 1000);
-            let min = Math.floor(seconds / 60);
-            let sec = seconds % 60;
-            let timeStr = `${min}:${sec < 10 ? '0' + sec : sec}`;
-
-            this.drawCenteredString(timeStr, W - 40, 30, "bold 20px Arial", remaining < 30000 ? "red" : "white");
-
-            if (this.eng.isDoubleElixir) {
-                this.drawCenteredString("2x Elixir", 50, 30, "bold 20px Arial", "#c800c8");
-            }
-
-            if (this.eng.doubleElixirAnim > 0) {
-                ctx.fillStyle = `rgba(200, 0, 200, ${this.eng.doubleElixirAnim / 100.0})`;
-                ctx.font = "bold 40px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText("2x Elixir!", W / 2, H / 2);
-            }
-
-            if (this.eng.tiebreaker) {
-                this.drawCenteredString("TIEBREAKER!", W / 2, 100, "bold 30px Arial", "red");
-            }
-        }
-
-        if (this.state === State.CNT) {
-            let elapsed = Date.now() - this.t0;
-            let count = 3 - Math.floor(elapsed / 1000);
-            if (count > 0) {
-                ctx.fillStyle = "rgba(0,0,0,0.5)";
-                ctx.fillRect(0, 0, W, H);
-                this.drawCenteredString(`${count}`, W / 2, H / 2, "bold 100px Arial", "white");
-            }
-        }
+        } // End PLAY|CNT block
 
         if (this.state === State.OVER) {
-            ctx.fillStyle = "rgba(0,0,0,0.7)";
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
             ctx.fillRect(0, 0, W, H);
-            let msg = this.eng.win === 0 ? "VICTORY!" : "DEFEAT!";
-            this.drawCenteredString(msg, W / 2, H / 2 - 50, "bold 50px Arial", this.eng.win === 0 ? "#00c8ff" : "red");
-            this.drawBtn(this.exitBtn, "EXIT", "gray");
+            let msg = this.eng.win === 0 ? "You Win!" : "You Lose!";
+            let color = this.eng.win === 0 ? "#32CD32" : "#FF6347";
+            this.drawCenteredString(msg, W / 2, H / 2 - 50, "bold 50px Arial", color);
+            this.drawBtn(this.exitBtn, "EXIT", "#FFA500");
         }
-    }
+    } // End render()
 
     drawEntityBody(e) {
-        if (e.isClone) ctx.globalAlpha = 0.5;
 
-        let isTower = e instanceof Tower;
-        let isBuilding = e instanceof Building;
-        let isTroop = e instanceof Troop;
+        let x = e.x;
+        let y = e.y;
+        let radius = e.rad;
 
-        // Strict Team Colors: Player (0) = Blue, Enemy (1) = Red
-        let color = e.tm === 0 ? "#3296ff" : "#ff3232";
-        if (isTower) color = e.tm === 0 ? "#1e5a96" : "#961e1e";
-        if (isBuilding) color = e.tm === 0 ? "#646464" : "#503232";
+        // Visual Z-Index offset for flying
+        if (e.fly) {
+            // Shadow (Higher up as requested)
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+            ctx.beginPath();
+            ctx.ellipse(e.x, e.y - 15, radius * 0.8, radius * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Removed specific unit color overrides to enforce team colors as requested.
+            y -= 25;
+            radius *= 1.1;
+        }
 
-        ctx.fillStyle = color;
-        let r = e.rad;
-        if (isTower || isBuilding) r = this.eng.getHitboxRadius(e);
+        // Jump offset
+        if (e instanceof Troop && e.jp) {
+            let jumpHeight = 0;
+            if (e.jt) {
+                let totalDist = e.jd;
+                let currentDist = e.dist(e.jt);
+                let progress = 1.0 - (currentDist / totalDist);
+                jumpHeight = 50.0 * Math.sin(progress * Math.PI);
+            }
+            y -= jumpHeight;
+        }
 
-        // Simple shape drawing
-        if (isTower) {
-            ctx.fillRect(e.x - 25, e.y - 25, 50, 50);
-            this.drawHealthBar(e.x, e.y - 35, e.hp, e.mhp);
-        } else if (isBuilding) {
-            let vr = this.eng.getVisualRadius(e.c);
-            ctx.fillRect(e.x - vr, e.y - vr, vr * 2, vr * 2);
-            this.drawHealthBar(e.x, e.y - vr - 10, e.hp, e.mhp);
-        } else {
-            ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = "black"; ctx.stroke();
+        // Electric Aura (Blue, Flickering)
+        let name = e.c ? e.c.n : "";
+        if (name === "Sparky" || name === "Zappies") {
+            let threshold = (name === "Zappies") ? 72 : 180;
+            let isCharging = (e.chargeT > 0 && e.chargeT < threshold);
+            let isReady = (e.chargeT >= threshold);
 
-            // HP/Shield Bar
-            if (e.shield > 0) {
-                if (e.shield < e.maxShield) {
-                    this.drawHealthBar(e.x, e.y - r - 8, e.shield, e.maxShield, "#800080"); // Purple for Shield
-                } else {
-                    // Full shield, maybe don't draw or draw? Standard is hide if full.
-                    // But prompt says "extra healthbar".
-                    // Let's show it if it's not full, OR if HP is not full?
-                    // Usually hide if 100%.
+            if (isCharging) {
+                // Flicker while charging
+                let flick = (Math.floor(Date.now() / 50) % 2 === 0);
+                if (flick) {
+                    ctx.strokeStyle = "cyan";
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
                 }
-                // If Shield exists, we usually don't show HP bar underneath in CR unless broken.
-                // But let's follow the logic: "Shield" is the bar.
-            } else if (e.hp < e.mhp) {
-                this.drawHealthBar(e.x, e.y - r - 5, e.hp, e.mhp, "#00ff00");
+            } else if (isReady) {
+                // Solid ring when ready? User said "stop flickering".
+                // Detailed interpretation: "when it is done charging, it should stop flickering."
+                // I will leave it as NO aura when ready, or maybe a solid one.
+                // Let's go with SOLID to indicate readiness.
+                ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.lineWidth = 1;
             }
         }
 
-        // Draw Name
-        if (isTroop) {
-            this.drawCenteredString(e.c.n, e.x, e.y - r - 15, "10px Arial", "white");
-        }
+        let isFriend = (e.tm === 0);
+        let color = isFriend ? "#3296ff" : (e.isClone ? "cyan" : "#ff3232");
+        if (e.isClone) color = isFriend ? "#32ffff" : "#ff32ff";
 
-        if (e.fr > 0) {
-            ctx.fillStyle = "rgba(100, 200, 255, 0.5)";
-            ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
-        }
-        if (e.rt > 0) {
-            ctx.strokeStyle = "brown";
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
-            ctx.lineWidth = 1;
-        }
-        if (e.st > 0) {
-            this.drawCenteredString("!", e.x, e.y - r - 25, "bold 20px Arial", "yellow");
-        }
 
-        if (e.isClone) ctx.globalAlpha = 1.0;
-    }
 
-    drawHealthBar(x, y, hp, mhp, color) {
-        let w = 30;
-        let h = 4;
-        ctx.fillStyle = "black";
-        ctx.fillRect(x - w / 2, y, w, h);
-        ctx.fillStyle = color || "#00ff00";
-        ctx.fillRect(x - w / 2, y, w * (Math.max(0, hp) / mhp), h);
-    }
 
-    drawBtn(rect, text, color) {
-        let rx = rect.x, ry = rect.y, rw = rect.w, rh = rect.h;
-
-        // Check hover
-        if (this.contains(rect, this.mouse.x, this.mouse.y)) {
-            let scale = 1.1;
-            rw = rect.w * scale;
-            rh = rect.h * scale;
-            rx = rect.x - (rw - rect.w) / 2;
-            ry = rect.y - (rh - rect.h) / 2;
+        // Freeze/Slow effect
+        if (e instanceof Troop) {
+            if (e.fr > 0) {
+                color = "#add8e6"; // Light Blue
+            } else if (e.sl > 0) {
+                // Blend with Light Sky Blue or just simple tint
+                color = "#87CEFA";
+            }
         }
 
         ctx.fillStyle = color;
-        this.drawRoundRect(rx, ry, rw, rh, 10, true, true);
-        this.drawCenteredString(text, rx + rw / 2, ry + rh / 2, "bold 20px Arial", "white");
-    }
-
-    drawRoundRect(x, y, w, h, radius, fill, stroke) {
-        if (typeof stroke === 'undefined') { stroke = true; }
-        if (typeof radius === 'undefined') { radius = 5; }
-        if (typeof radius === 'number') { radius = { tl: radius, tr: radius, br: radius, bl: radius }; } else {
-            var defaultRadius = { tl: 0, tr: 0, br: 0, bl: 0 };
-            for (var side in defaultRadius) { radius[side] = radius[side] || defaultRadius[side]; }
-        }
+        ctx.strokeStyle = "black"; // RESET STROKE STYLE
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(x + radius.tl, y);
-        ctx.lineTo(x + w - radius.tr, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
-        ctx.lineTo(x + w, y + h - radius.br);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
-        ctx.lineTo(x + radius.bl, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
-        ctx.lineTo(x, y + radius.tl);
-        ctx.quadraticCurveTo(x, y, x + radius.tl, y);
-        ctx.closePath();
-        if (fill) { ctx.fill(); }
-        if (stroke) { ctx.stroke(); }
+        if (e instanceof Tower) {
+            // ROUNDED TOWER
+            let r = e.rad; // use radius as half-width approx
+            // drawRoundRect expects x,y as top-left
+            this.drawRoundRect(x - r, y - r, r * 2, r * 2, 8, true, true); // 5px radius corner
+        } else if (e instanceof Building) {
+            ctx.rect(x - radius, y - radius, radius * 2, radius * 2);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+
+        // HP Bar
+        if (e.hp < e.mhp) {
+            let hpPct = Math.max(0, e.hp / e.mhp);
+            let barW = 30;
+            ctx.fillStyle = "red";
+            ctx.fillRect(x - barW / 2, y - radius - 10, barW, 4);
+            ctx.fillStyle = "#32CD32";
+            ctx.fillRect(x - barW / 2, y - radius - 10, barW * hpPct, 4);
+        }
+
+        // Level / Name
+        // Level / Name
+        if (name && name.length > 0) {
+            let fontSize = Math.max(9, Math.min(13, 8 + radius * 0.4));
+            ctx.fillStyle = "rgba(255, 255, 255, 0.7)"; // Less visible
+            ctx.font = `${fontSize}px Arial`; // Simple Arial, no bold
+            ctx.textAlign = "center";
+
+            // Drop shadow for readability instead of heavy stroke
+            ctx.shadowColor = "black";
+            ctx.shadowBlur = 2;
+
+            let textY = y - radius - 20; // Above HP bar
+            if (e.hp >= e.mhp) textY = y - radius - 5; // Lower if no HP bar
+
+            ctx.fillText(name, x, textY);
+
+            // Reset shadow
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
+        }
     }
 
-    drawCenteredString(text, x, y, font, color) {
-        ctx.font = font;
+    drawBtn(rect, txt, color) {
+        let isHover = this.contains(rect, this.mouse.x, this.mouse.y);
+        let drawRect = { ...rect };
+
+        if (isHover) {
+            let scale = 1.1;
+            let w = rect.w * scale;
+            let h = rect.h * scale;
+            drawRect.x = rect.x - (w - rect.w) / 2;
+            drawRect.y = rect.y - (h - rect.h) / 2;
+            drawRect.w = w;
+            drawRect.h = h;
+        }
+
         ctx.fillStyle = color;
+        this.drawRoundRect(drawRect.x, drawRect.y, drawRect.w, drawRect.h, 10, true, true);
+        ctx.fillStyle = "white";
+        ctx.font = "bold 16px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(text, x, y);
+        ctx.fillText(txt, drawRect.x + drawRect.w / 2, drawRect.y + drawRect.h / 2);
+        ctx.textBaseline = "alphabetic"; // Reset
     }
 
-    drawElixirCost(x, y, cost) {
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 4;
-        ctx.fillStyle = "#D800D8";
-        ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "white"; ctx.stroke();
-        ctx.lineWidth = 1;
-        this.drawCenteredString(`${cost}`, x, y + 1, "bold 14px Arial", "white");
+    drawCenteredString(txt, x, y, font, color) {
+        ctx.fillStyle = color;
+        ctx.font = font;
+        ctx.textAlign = "center";
+        ctx.fillText(txt, x, y);
+    }
+
+    drawElixirCost(x, y, val) {
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = "#c800c8";
+        ctx.fill();
+        ctx.strokeStyle = "black";
+        ctx.stroke();
+        ctx.fillStyle = "white";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(val, x, y);
+        ctx.textBaseline = "alphabetic";
+    }
+
+    drawRoundRect(x, y, w, h, r, fill, stroke) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+        if (fill) ctx.fill();
+        if (stroke) {
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        }
     }
 }
 
-window.onload = () => {
-    try {
-        new Main();
-    } catch (e) {
-        window.logError("Startup Crash: " + e.message + "\nStack: " + e.stack);
-    }
-};
+new Main();

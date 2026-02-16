@@ -34,40 +34,41 @@ export default class GameEngine {
         this.gamesWon = 0;
         this.enemyDeckSelection = [];
         this.debugView = false;
+        this.debugEnemyElixir = false;
 
         this.allCards = [
             new Card("Knight", 3, 1000, 30, 1.5, 20, 0, 15, 60, 150, false, false),
-            new Card("Archers", 3, 200, 25, 2, 100, 0, 3, 60, 180, false, true),
-            new Card("Giant", 5, 2000, 150, 0.8, 20, 1, 500, 90, 150, false, false),
+            new Card("Archers", 3, 200, 25, 1.5, 100, 0, 3, 60, 180, false, true),
+            new Card("Giant", 5, 3000, 150, 0.8, 20, 1, 500, 90, 150, false, false),
             new Card("Fireball", 4, 0, 200, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Mini PEKKA", 4, 900, 300, 1.8, 20, 0, 15, 60, 150, false, false),
+            new Card("Mini PEKKA", 4, 900, 300, 1.6, 20, 0, 15, 60, 150, false, false),
             new Card("Zap", 2, 0, 60, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Skeletons", 1, 20, 40, 2.0, 6, 0, 2, 22, 150, false, false),
+            new Card("Skeletons", 1, 20, 40, 1.6, 6, 0, 2, 22, 150, false, false),
             new Card("Musketeer", 4, 500, 150, 1.5, 140, 0, 10, 60, 220, false, true),
             new Card("Cannon", 3, 700, 100, 0, 120, 3, 10000, 100, 120, false, false),
             new Card("Mega Knight", 7, 3000, 500, 1.2, 22, 0, 200, 100, 200, false, false),
             new Card("P.E.K.K.A", 7, 4000, 980, 0.5, 22, 0, 200, 120, 200, false, false),
-            new Card("Skeleton Army", 3, 20, 40, 2.0, 6, 0, 2, 10, 150, false, false),
+            new Card("Skeleton Army", 3, 20, 40, 1.6, 6, 0, 2, 10, 150, false, false),
             new Card("Barbarians", 5, 600, 150, 1.2, 18, 0, 10, 90, 180, false, false),
             new Card("Goblin Barrel", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Royale Delivery", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Vines", 2, 0, 20, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Freeze", 4, 0, 5, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Fire Spirit", 1, 180, 0, 2.0, 12, 0, 2, 10, 150, false, true),
-            new Card("Ice Spirit", 1, 180, 8, 2.0, 12, 0, 2, 10, 150, false, true),
-            new Card("Electro Spirit", 1, 180, 8, 2.0, 12, 0, 2, 10, 150, false, true),
-            new Card("Heal Spirit", 1, 180, 8, 2.0, 12, 0, 2, 10, 150, false, true),
+            new Card("Fire Spirit", 1, 230, 0, 2.0, 12, 0, 2, 10, 150, false, true),
+            new Card("Ice Spirit", 1, 230, 8, 2.0, 12, 0, 2, 10, 150, false, true),
+            new Card("Electro Spirit", 1, 230, 8, 2.0, 12, 0, 2, 10, 150, false, true),
+            new Card("Heal Spirit", 1, 230, 8, 2.0, 12, 0, 2, 10, 150, false, true),
             new Card("Arrows", 3, 0, 120, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Minions", 3, 190, 50, 2.0, 12, 0, 3, 40, 150, true, true),
-            new Card("Goblins", 2, 90, 100, 2.5, 12, 0, 2, 60, 150, false, false),
-            new Card("Spear Goblins", 2, 110, 50, 2.5, 90, 0, 2, 50, 180, false, true),
+            new Card("Minions", 3, 190, 50, 1.6, 12, 0, 3, 40, 150, true, true),
+            new Card("Goblins", 2, 90, 100, 1.7, 12, 0, 2, 60, 150, false, false),
+            new Card("Spear Goblins", 2, 110, 50, 2.0, 90, 0, 2, 50, 180, false, true),
             new Card("Bats", 2, 67, 67, 2.5, 10, 0, 2, 60, 150, true, true),
             new Card("Poison", 4, 0, 3000, 0, 200, 2, 0, 0, 0, false, true),
             new Card("Wizard", 5, 700, 230, 1.5, 100, 0, 10, 84, 220, false, true),
             new Card("Witch", 5, 800, 111, 1.5, 100, 0, 10, 42, 220, false, true),
             new Card("Graveyard", 5, 0, 0, 0, 33, 2, 0, 0, 0, false, true),
-            new Card("Mega Minion", 3, 700, 250, 1.6, 20, 0, 200, 60, 150, true, true),
-            new Card("Minion Horde", 5, 190, 50, 2.0, 12, 0, 6, 40, 150, true, true),
+            new Card("Mega Minion", 3, 700, 250, 1.5, 20, 0, 200, 60, 150, true, true),
+            new Card("Minion Horde", 5, 190, 50, 1.6, 12, 0, 6, 40, 150, true, true),
             new Card("Baby Dragon", 4, 1000, 130, 1.5, 80, 0, 10, 80, 180, true, true),
             new Card("Inferno Dragon", 4, 1070, 1, 1.5, 50, 0, 4, 1, 150, true, true),
             new Card("Inferno Tower", 5, 1400, 1, 0.4, 120, 3, 30 * 60, 1, 120, false, true),
@@ -80,9 +81,9 @@ export default class GameEngine {
             new Card("Sparky", 6, 2000, 1500, 0.8, 90, 0, 2000, 300, 150, false, false),
             new Card("Mirror", 1, 0, 0, 0, 0, 2, 0, 0, 0, false, true),
             new Card("Clone", 3, 0, 0, 0, 0, 2, 0, 0, 0, false, true),
-            new Card("Wall Breakers", 2, 140, 560, 2.0, 12, 1, 4, 60, 150, false, false),
-            new Card("Royal Giant", 6, 3000, 390, 0.8, 120, 1, 500, 102, 200, false, false),
-            new Card("Electro Giant", 7, 3000, 150, 0.8, 20, 1, 150, 90, 150, false, false),
+            new Card("Wall Breakers", 2, 230, 560, 4.0, 12, 1, 4, 60, 150, false, false),
+            new Card("Royal Giant", 6, 4500, 390, 0.8, 120, 1, 500, 102, 200, false, false),
+            new Card("Electro Giant", 7, 4500, 150, 0.8, 20, 1, 150, 90, 150, false, false),
             new Card("Bowler", 5, 2000, 200, 0.8, 100, 0, 180, 150, 150, false, false),
             new Card("Hog Rider", 4, 1600, 264, 2.0, 20, 1, 300, 60, 150, false, false),
             new Card("Royal Hogs", 5, 695, 68, 2.0, 20, 1, 150, 60, 120, false, false),
@@ -92,7 +93,8 @@ export default class GameEngine {
             new Card("Barbarian Barrel", 2, 0, 200, 0, 0, 2, 0, 0, 0, false, false),
             new Card("Royal Recruits", 7, 500, 110, 1.5, 23, 0, 20, 78, 150, false, false),
             new Card("Dark Prince", 4, 1000, 200, 1.2, 20, 0, 120, 60, 150, false, false),
-            new Card("Crate", 2, 300, 0, 0, 0, 3, 1800, 0, 0, false, false)
+            new Card("Crate", 2, 300, 0, 0, 0, 3, 1800, 0, 0, false, false),
+            new Card("Ice Golem", 2, 1100, 70, 0.8, 12, 1, 150, 60, 150, false, false)
         ];
 
         // Apply Stat Adjustments
@@ -127,6 +129,25 @@ export default class GameEngine {
         });
 
         this.enemyAI = null;
+        this.isMultiplayer = false;
+    }
+
+    setMultiplayer(enabled) {
+        this.isMultiplayer = enabled;
+    }
+
+    spawnRemote(cardName, x, y, team) {
+        // Transform coordinates for local view
+        // Incoming (x, y) is from opponent's perspective (they are bottom 0..800 relative)
+        // Center of symmetry is y=400, x=270
+        // We map their y (Player Side) to our y (Enemy Side)
+        let rx = this.W - x;
+        let ry = 800 - y;
+
+        let card = this.getCard(cardName);
+        if (card) {
+            this.addU(1, card, rx, ry); // Always team 1 (Enemy) from our perspective
+        }
     }
 
     giveElixir(teamToGive, amount) {
@@ -175,6 +196,7 @@ export default class GameEngine {
             cheatPressed: this.cheatPressed,
             myDeck: this.myDeck.map(c => c.n),
             debugView: this.debugView,
+            debugEnemyElixir: this.debugEnemyElixir,
             enemyDeckSelection: this.enemyDeckSelection.map(c => c.n),
             unlockedCards: this.unlockedCards.map(c => c.n)
         };
@@ -218,6 +240,7 @@ export default class GameEngine {
         this.cheated = data.cheated || false;
         this.cheatPressed = data.cheatPressed || false; // New field
         this.debugView = data.debugView || false;
+        this.debugEnemyElixir = data.debugEnemyElixir || false;
 
         this.myDeck = [];
         if (data.myDeck) {
@@ -314,18 +337,41 @@ export default class GameEngine {
         this.ents.push(this.t2R);
     }
 
-    isValid(y, x, c) {
+    isValid(y, x, c, tm) {
         if (c.n === "The Log" || c.n === "Barbarian Barrel") {
-            // Log/BarbBarrel must be placed on player's side (roughly)
-            if (y < this.RIV_Y + 40) return false;
-            return true;
+            // Log/BarbBarrel must be placed on player's side (roughly) unless tower down
+            // P1 (tm=0) plays on bottom (y > RIV_Y), P2 (tm=1) plays on top (y < RIV_Y)
+
+            if (tm === 0) {
+                // Player Logic
+                if (this.t2L.hp <= 0 && x < this.W / 2 && y >= 200) return true; // Pocket Left
+                if (this.t2R.hp <= 0 && x > this.W / 2 && y >= 200) return true; // Pocket Right
+                if (y < this.RIV_Y + 40) return false;
+                return true;
+            } else {
+                // Enemy Logic
+                if (this.t1L.hp <= 0 && x < this.W / 2 && y <= this.H - 200) return true; // Pocket Left
+                if (this.t1R.hp <= 0 && x > this.W / 2 && y <= this.H - 200) return true; // Pocket Right
+                if (y > this.RIV_Y - 40) return false;
+                return true;
+            }
         }
         if (c.t === 2 || c.n === "Goblin Barrel") return true;
-        if (y >= this.RIV_Y + 40) return true;
-        if (c.t === 3 && y > this.RIV_Y - 40 && y < this.RIV_Y + 40) return false;
-        if (this.t2L && this.t2L.hp <= 0 && x < this.W / 2 && y >= 200) return true; // Updated to 200
-        if (this.t2R && this.t2R.hp <= 0 && x > this.W / 2 && y >= 200) return true; // Updated to 200
-        return false;
+
+        if (tm === 0) {
+            if (y >= this.RIV_Y + 40) return true;
+            if (c.t === 3 && y > this.RIV_Y - 40 && y < this.RIV_Y + 40) return false;
+            if (this.t2L && this.t2L.hp <= 0 && x < this.W / 2 && y >= 200) return true;
+            if (this.t2R && this.t2R.hp <= 0 && x > this.W / 2 && y >= 200) return true;
+            return false;
+        } else {
+            // Enemy placement
+            if (y <= this.RIV_Y - 40) return true;
+            if (c.t === 3 && y > this.RIV_Y - 40 && y < this.RIV_Y + 40) return false;
+            if (this.t1L && this.t1L.hp <= 0 && x < this.W / 2 && y <= this.H - 200) return true;
+            if (this.t1R && this.t1R.hp <= 0 && x > this.W / 2 && y <= this.H - 200) return true;
+            return false;
+        }
     }
 
     getHitboxRadius(e) {
@@ -343,9 +389,9 @@ export default class GameEngine {
     }
 
     getSpellRadius(c) {
-        if (c.n === "Poison" || c.n === "Graveyard" || c.n === "Freeze" || c.n === "Arrows") return { type: 'circle', val: 160 };
+        if (c.n === "Arrows" || c.n === "Poison" || c.n === "Graveyard" || c.n === "Freeze") return { type: 'circle', val: 80 };
         if (c.n === "Vines") return { type: 'circle', val: 80 };
-        if (c.n === "Zap") return { type: 'circle', val: 40 };
+        if (c.n === "Zap") return { type: 'circle', val: 50 };
         if (c.n === "Fireball" || c.n === "Royal Delivery" || c.n === "Rocket" || c.n === "Giant Snowball") return { type: 'circle', val: 60 };
         if (c.n === "The Log") return { type: 'rect', w: 70, h: 20 }; // Visual approximation
         if (c.n === "Barbarian Barrel") return { type: 'rect', w: 44, h: 20 };
@@ -387,7 +433,7 @@ export default class GameEngine {
             }
         }
 
-        if (!this.isValid(y, x, cardToPlay)) return;
+        if (!this.isValid(y, x, cardToPlay, 0)) return;
         this.p1.elx -= cost;
 
         // Apply Mirror Boost (5% HP/Dmg)
@@ -437,9 +483,9 @@ export default class GameEngine {
             let rad = shape && shape.type === 'circle' ? shape.val : 100;
             this.projs.push(new Proj(x, y, x, y, null, 0, true, rad, 0, tm, false).asGraveyard());
         } else if (c.n === "The Log") {
-            // Log rolls 10.1 tiles. 1 tile ~ 30px. 10.1 * 30 = 303px.
-            // Speed: 2.5x slower than 10 => 4.
-            let dist = 303;
+            // Log rolls 280px (User requested).
+            // Speed: 2.66
+            let dist = 280;
             let ty = (tm === 0) ? y - dist : y + dist;
             let p = new Proj(x, y, x, ty, null, 2.66, false, 60, Math.floor(c.d * 0.8), tm, false).asLog();
             this.projs.push(p);
@@ -563,8 +609,8 @@ export default class GameEngine {
 
     upd() {
         let elapsed = Date.now() - this.gameStart;
-        let remaining = 300000 - elapsed;
-        if (remaining <= 120000 && !this.isDoubleElixir) {
+        let remaining = 180000 - elapsed; // 3 minutes
+        if (remaining <= 60000 && !this.isDoubleElixir) { // 1 minute left
             this.isDoubleElixir = true;
             this.doubleElixirAnim = 300;
         }
@@ -603,14 +649,14 @@ export default class GameEngine {
 
         let rate = this.isDoubleElixir ? 0.02 : 0.01;
         this.p1.elx = Math.min(10, this.p1.elx + rate);
-        this.p2.elx = Math.min(10, this.p2.elx + rate);
+        this.p2.elx = Math.min(10, this.p2.elx + rate * 0.85); // 15% slower than player
 
         this.aiTick++;
 
         this.t1K.actv = (this.t1K.hp < this.t1K.mhp) || (this.t1L.hp <= 0) || (this.t1R.hp <= 0);
         this.t2K.actv = (this.t2K.hp < this.t2K.mhp) || (this.t2L.hp <= 0) || (this.t2R.hp <= 0);
 
-        if (this.enemyAI) this.enemyAI.update();
+        if (this.enemyAI && !this.isMultiplayer) this.enemyAI.update();
 
         // Stuck Push
         for (let e of this.ents) {
