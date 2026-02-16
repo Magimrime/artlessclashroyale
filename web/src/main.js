@@ -1001,6 +1001,12 @@ class Main {
 
             // Draw Entities
             for (let e of this.eng.ents) if (!e.fly) this.drawEntityBody(e);
+
+            // Draw Projectiles
+            if (this.eng.projs) {
+                for (let p of this.eng.projs) this.drawProj(p);
+            }
+
             for (let e of this.eng.ents) if (e.fly) this.drawEntityBody(e);
 
             // Status Effects
@@ -1328,6 +1334,70 @@ class Main {
             ctx.strokeStyle = "black";
             ctx.stroke();
         }
+    }
+
+    drawProj(p) {
+        let x = p.x;
+        let y = p.y;
+        let r = p.rad || 5;
+
+        ctx.save();
+        ctx.translate(x, y);
+
+        if (p.isLog || p.isRolling) {
+            // Rotate towards target
+            let angle = Math.atan2(p.ty - p.y, p.tx - p.tx); // wait, sync passes tx, ty?
+            // Proj object has tx, ty. In importState we set them.
+            // But if p is from sync, tx/ty are numbers.
+            // Actually, we passed tx, ty in importState.
+            if (p.tx !== undefined) {
+                angle = Math.atan2(p.ty - y, p.tx - x);
+            }
+            ctx.rotate(angle);
+
+            // Draw Log
+            ctx.fillStyle = "#8B4513"; // SaddleBrown
+            let w = p.isLog ? 70 : 40;
+            let h = 20;
+            ctx.fillRect(-w / 2, -h / 2, w, h);
+
+            // Spikes
+            ctx.fillStyle = "#A9A9A9";
+            for (let i = -w / 2 + 5; i < w / 2; i += 10) {
+                ctx.beginPath();
+                ctx.arc(i, -h / 2, 3, 0, Math.PI, true);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(i, h / 2, 3, 0, Math.PI, false);
+                ctx.fill();
+            }
+
+        } else if (p.poison || p.graveyard || p.isHeal) {
+            // Area effects
+            ctx.fillStyle = p.isHeal ? "rgba(255, 255, 0, 0.3)" : (p.poison ? "rgba(255, 165, 0, 0.3)" : "rgba(128, 128, 128, 0.3)");
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = p.isHeal ? "yellow" : (p.poison ? "orange" : "gray");
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            // Standard Projectile (Ball)
+            let color = "orange"; // Fireball
+            if (r < 10) color = "gray"; // Arrow
+            if (p.tm === 0) color = "#3296ff"; // Blueish for friend
+            else color = "#ff3232"; // Red for enemy
+
+            if (p.isHeal) color = "yellow";
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 }
 

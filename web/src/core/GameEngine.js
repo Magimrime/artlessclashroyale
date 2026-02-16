@@ -160,6 +160,11 @@ export default class GameEngine {
             h1: this.p1.h.map(c => c.n),
             h2: this.p2.h.map(c => c.n),
 
+            // Sync Game Over
+            ov: this.over,
+            tie: this.tiebreaker,
+            win: this.win, // if available
+
             ents: this.ents.map(e => ({
                 id: e.id,
                 n: e.c ? e.c.n : (e.constructor.name), // Name or Class
@@ -178,12 +183,30 @@ export default class GameEngine {
                 spT: e.spT || 0,
                 sh: e.shield || 0,
                 msh: e.maxShield || 0
+            })),
+
+            projs: this.projs.map(p => ({
+                x: Math.round(p.x),
+                y: Math.round(p.y),
+                tx: Math.round(p.tx),
+                ty: Math.round(p.ty),
+                tm: p.tm,
+                r: p.rad,
+                // Flags for rendering
+                log: p.isLog,
+                roll: p.isRolling,
+                poi: p.poison,
+                gy: p.graveyard,
+                heal: p.isHeal
             }))
         };
     }
 
     importState(data, flip) {
         this.aiTick = data.t;
+        this.over = data.ov;
+        this.tiebreaker = data.tie;
+        if (data.win !== undefined) this.win = data.win; // Or infer
 
         // Sync Elixir and Hand
         if (flip) {
@@ -201,6 +224,7 @@ export default class GameEngine {
 
         const serverIds = new Set();
 
+        // ENTITIES
         data.ents.forEach(sEnt => {
             serverIds.add(sEnt.id);
             let local = this.ents.find(e => e.id === sEnt.id);
@@ -273,9 +297,35 @@ export default class GameEngine {
 
         // Remove dead/missing
         this.ents = this.ents.filter(e => {
-            if (e instanceof Tower && !serverIds.has(e.id)) return true; // Keep unmapped towers just in case
+            // REMOVED THE TOWER CHECK HERE TO ALLOW DELETION
             return serverIds.has(e.id);
         });
+
+        // PROJECTILES (Visual Sync)
+        this.projs = []; // Clear local projs
+        if (data.projs) {
+            data.projs.forEach(p => {
+                let tx = p.x;
+                let ty = p.y;
+                let ttx = p.tx;
+                let tty = p.ty;
+                let tm = p.tm;
+
+                if (flip) {
+                    tx = this.W - tx;
+                    ty = 800 - ty;
+                    ttx = this.W - ttx;
+                    tty = 800 - tty;
+                    tm = 1 - tm;
+                }
+
+                // Create simple object for rendering
+                this.projs.push({
+                    x: tx, y: ty, tx: ttx, ty: tty, tm: tm, rad: p.r,
+                    isLog: p.log, isRolling: p.roll, poison: p.poi, graveyard: p.gy, isHeal: p.heal
+                });
+            });
+        }
     }
 
     syncHand(p, cardNames) {
@@ -290,14 +340,40 @@ export default class GameEngine {
     spawnRemote(cardName, x, y, team) {
         // Transform coordinates for local view
         // Incoming (x, y) is from opponent's perspective (they are bottom 0..800 relative)
-        // Center of symmetry is y=400, x=270
-        // We map their y (Player Side) to our y (Enemy Side)
         let rx = this.W - x;
         let ry = 800 - y;
 
-        let card = this.getCard(cardName);
+        // Validation for Player 2 (Remote)
+        let p = (team === 1) ? this.p2 : this.p1; // Usually team is 1 for opponent
+
+        // Find card in hand
+        let card = p.h.find(c => c.n === cardName);
+        if (!card) {
+            card = this.getCard(cardName);
+        }
+
         if (card) {
-            this.addU(1, card, rx, ry); // Always team 1 (Enemy) from our perspective
+            // Placement Validation
+            // ry, rx is correct for isValid(y, x, ...)?
+            // isValid(y, x, c, tm)
+            if (!this.isValid(ry, rx, card, team)) {
+                console.warn("Invalid Remote Placement rejected");
+                return;
+            }
+
+            // Check Elixir
+            if (p.elx >= card.c) {
+                p.elx -= card.c;
+                this.addU(team, card, rx, ry);
+
+                // Cycle Card
+                let idx = p.h.indexOf(card);
+                if (idx > -1) {
+                    p.h.splice(idx, 1);
+                    p.pile.push(card);
+                    p.h.push(p.pile.shift());
+                }
+            }
         }
     }
 
@@ -432,7 +508,7 @@ export default class GameEngine {
         return localStorage.getItem('clash_royale_save') !== null; // Visual check uses local, async load handles server
     }
 
-    reset() {
+    reset(enemyDeck) {
         this.p1 = new Player(0);
         this.p2 = new Player(1);
         this.ents = [];
@@ -456,19 +532,42 @@ export default class GameEngine {
 
         this.enemyAI = new EnemyAI(this);
 
-        // Enemy Deck: Random 8 cards from unlocked cards (or all cards if not enough)
         this.p2.pile = [];
-        let enemyPool = [...this.unlockedCards];
-        if (enemyPool.length < 8) enemyPool = [...this.allCards]; // Fallback
+        if (enemyDeck && enemyDeck.length > 0) {
+            // Use provided enemy deck
+            enemyDeck.forEach(n => {
+                let c = this.getCard(n);
+                if (c) this.p2.pile.push(c);
+            });
+            // Fallback if deck incomplete?
+            if (this.p2.pile.length < 8) {
+                // Fill with random?
+                let pool = [...this.allCards];
+                while (this.p2.pile.length < 8) {
+                    let c = pool[Math.floor(Math.random() * pool.length)];
+                    if (!this.p2.pile.includes(c)) this.p2.pile.push(c);
+                }
+            }
+        } else {
+            // Enemy Deck: Random 8 cards from unlocked cards (or all cards if not enough)
+            let enemyPool = [...this.unlockedCards];
+            if (enemyPool.length < 8) enemyPool = [...this.allCards]; // Fallback
 
-        // Shuffle pool
-        for (let i = enemyPool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [enemyPool[i], enemyPool[j]] = [enemyPool[j], enemyPool[i]];
+            // Shuffle pool
+            for (let i = enemyPool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [enemyPool[i], enemyPool[j]] = [enemyPool[j], enemyPool[i]];
+            }
+
+            // Pick top 8
+            for (let i = 0; i < 8; i++) this.p2.pile.push(enemyPool[i]);
         }
 
-        // Pick top 8
-        for (let i = 0; i < 8; i++) this.p2.pile.push(enemyPool[i]);
+        // Shuffle p2 pile (important for fair draw order even if deck is known)
+        for (let i = this.p2.pile.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.p2.pile[i], this.p2.pile[j]] = [this.p2.pile[j], this.p2.pile[i]];
+        }
 
         this.p2.h = [];
         for (let i = 0; i < 4; i++) this.p2.h.push(this.p2.pile.shift());
