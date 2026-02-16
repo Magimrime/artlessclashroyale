@@ -154,8 +154,12 @@ export default class GameEngine {
     exportState() {
         return {
             t: this.aiTick,
-            el1: this.p1.elixir,
-            el2: this.p2.elixir,
+            el1: this.p1.elx,
+            el2: this.p2.elx,
+            // Sync Hands (Card Names)
+            h1: this.p1.h.map(c => c.n),
+            h2: this.p2.h.map(c => c.n),
+
             ents: this.ents.map(e => ({
                 id: e.id,
                 n: e.c ? e.c.n : (e.constructor.name), // Name or Class
@@ -164,10 +168,16 @@ export default class GameEngine {
                 hp: Math.round(e.hp),
                 mhp: e.mhp,
                 tm: e.tm,
-                // Add specific visual flags if needed
-                st: e.st,
-                fr: e.fr,
-                rt: e.rt
+                // Visual flags
+                st: e.st, // Status effects?
+                fr: e.fr, // Freeze?
+                rt: e.rt, // Root?
+                // Animation flags
+                atk: e.atk || false,
+                cd: e.cd || 0,
+                spT: e.spT || 0,
+                sh: e.shield || 0,
+                msh: e.maxShield || 0
             }))
         };
     }
@@ -175,12 +185,18 @@ export default class GameEngine {
     importState(data, flip) {
         this.aiTick = data.t;
 
+        // Sync Elixir and Hand
         if (flip) {
             this.p1.elx = data.el2;
             this.p2.elx = data.el1;
+            // Sync Hands: P1 (Client) gets Host P2's hand
+            this.syncHand(this.p1, data.h2);
+            this.syncHand(this.p2, data.h1);
         } else {
             this.p1.elx = data.el1;
             this.p2.elx = data.el2;
+            this.syncHand(this.p1, data.h1);
+            this.syncHand(this.p2, data.h2);
         }
 
         const serverIds = new Set();
@@ -204,36 +220,26 @@ export default class GameEngine {
                 local.x = tx;
                 local.y = ty;
                 local.hp = sEnt.hp;
-                local.tm = tm; // Should be constant but ensures sync
+                local.tm = tm;
                 local.st = sEnt.st;
                 local.fr = sEnt.fr;
                 local.rt = sEnt.rt;
+
+                // Anim flags
+                local.atk = sEnt.atk;
+                local.cd = sEnt.cd;
+                local.spT = sEnt.spT;
+                if (local.shield !== undefined) {
+                    local.shield = sEnt.sh;
+                    local.maxShield = sEnt.msh;
+                }
             } else {
                 // Create
                 if (sEnt.n === "Tower") {
-                    // Towers should exist. If new tower (impossible?), ignore or recreate.
-                    // But we might need to sync their state if they were destroyed/respawned? 
-                    // Towers are persistent. We just find the matching tower by pos?
-                    // IDs should match if we assign them well. 
-                    // But we generated IDs on Host. Client Towers have local IDs (0,1,2...).
-                    // If Host IDs differ, we won't find them in `local`.
-                    // We need to map Towers initially?
-                    // Or just treat them as generic entities.
-                    // If local not found, create it?
-                    // Towers are special.
-                    // Let's assume for now we might create duplicate towers if we don't handle this.
-                    // Fix: Check for existing tower at approx pos? 
-                    // Or Map existing towers to Server IDs on first sync?
-
-                    // Simple hack: If we find a tower at `tx, ty` that doesn't have a correct ID, adopt it?
-                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - tx, e.y - ty) < 10);
+                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - tx, e.y - ty) < 20); // Width allowed
                     if (existing) {
-                        existing.id = sEnt.id; // Adopt ID
+                        existing.id = sEnt.id;
                         existing.hp = sEnt.hp;
-                        // update other props
-                    } else {
-                        // Create new Tower
-                        // Not ideal but works for sync
                     }
                 } else {
                     let c = this.getCard(sEnt.n);
@@ -242,9 +248,24 @@ export default class GameEngine {
                         t.id = sEnt.id;
                         t.hp = sEnt.hp;
                         t.mhp = sEnt.mhp;
+                        t.atk = sEnt.atk;
+                        t.cd = sEnt.cd;
+                        t.spT = sEnt.spT;
+                        if (t.shield !== undefined) {
+                            t.shield = sEnt.sh;
+                            t.maxShield = sEnt.msh;
+                        }
                         this.ents.push(t);
                     } else if (sEnt.n === "Building") {
-                        // Generic building sync if needed
+                        let b = new Building(tm, tx, ty, this.getCard("Cannon")); // Fallback? Need Card Name for Building?
+                        // Building IS an Entity. Usually created from Card.
+                        // But `sEnt.n` might be "Building" if we used constructor name?
+                        // If it's a specific building card, n should be Card Name.
+                        // Checked export: `e.c ? e.c.n : e.constructor.name`.
+                        // Buildings usually have `c` (Card).
+                        // So `sEnt.n` should be "Cannon", "Tesla", etc.
+                        // Code above handles it via `getCard`.
+                        // If it falls through to "Building", it's likely an error or generic building without card?
                     }
                 }
             }
@@ -252,29 +273,18 @@ export default class GameEngine {
 
         // Remove dead/missing
         this.ents = this.ents.filter(e => {
-            // Keep persistent local ents if expected? No, Host is authority.
-            // If Host says it's gone, it's gone.
-
-            // Exception: Towers. If we haven't mapped them yet?
-            // "Adopt ID" logic above helps.
-            // But what if Server ID is 1, Local Tower has 0.
-            // We map 0 -> 1.
-            // Next frame we check ID 1. Found.
-            // Any entity NOT in serverIds is removed.
-            // Essential for death sync.
-            // But we must ensure Towers are mapped! 
-            // If they aren't mapped, they get deleted!
-
-            if (e instanceof Tower && !serverIds.has(e.id)) {
-                // Dangerous!
-                return true; // Keep unmapped towers? 
-                // No, if they are destroyed they should be removed?
-                // Towers persist even at 0 HP usually (ruins).
-                // Our logic: `t.hp` goes to 0 but entity remains.
-                // So Host continues to send it.
-            }
+            if (e instanceof Tower && !serverIds.has(e.id)) return true; // Keep unmapped towers just in case
             return serverIds.has(e.id);
         });
+    }
+
+    syncHand(p, cardNames) {
+        if (!cardNames) return;
+        // Reconstruct hand from names
+        // We reuse existing card objects if possible to avoid flicker? 
+        // Or just replace.
+        // Replace is easier.
+        p.h = cardNames.map(n => this.getCard(n)).filter(c => c);
     }
 
     spawnRemote(cardName, x, y, team) {
