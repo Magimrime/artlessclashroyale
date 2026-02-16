@@ -657,23 +657,24 @@ export default class GameEngine {
         return null;
     }
 
-    spawn(x, y) {
-        if (this.tiebreaker) return;
-        if (!this.sel || y > this.H - 120) return;
+    playCard(p, card, x, y, team) {
+        if (!card) return;
 
-        let cardToPlay = this.sel;
-        let cost = this.sel.c;
+        let cardToPlay = card;
+        let cost = card.c;
         let isMirror = false;
 
-        if (this.sel.n === "Mirror") {
-            if (!this.p1.lastPlayedCard) return;
-            cardToPlay = this.p1.lastPlayedCard;
+        if (card.n === "Mirror") {
+            if (!p.lastPlayedCard) return;
+            cardToPlay = p.lastPlayedCard;
             cost = cardToPlay.c + 1;
             isMirror = true;
         }
 
-        if (this.p1.elx < cost) return;
+        // Elixir Check
+        if (p.elx < cost) return;
 
+        // Building Placement Check (Don't place on top of buildings)
         if (cardToPlay.t === 3) {
             let newVisualRad = this.getVisualRadius(cardToPlay);
             for (let e of this.ents) {
@@ -683,36 +684,61 @@ export default class GameEngine {
             }
         }
 
-        if (!this.isValid(y, x, cardToPlay, 0)) return;
-        this.p1.elx -= cost;
+        // Valid Area Check
+        if (!this.isValid(y, x, cardToPlay, team)) return;
+
+        // Deduct Elixir
+        p.elx -= cost;
 
         // Apply Mirror Boost (5% HP/Dmg)
         if (isMirror) {
-            // Create a temporary boosted card object
             let boostedCard = Object.assign(Object.create(Object.getPrototypeOf(cardToPlay)), cardToPlay);
             boostedCard.hp = Math.floor(cardToPlay.hp * 1.05);
             boostedCard.d = Math.floor(cardToPlay.d * 1.05);
-            this.addU(0, boostedCard, x, y);
+            this.addU(team, boostedCard, x, y);
         } else {
-            this.addU(0, cardToPlay, x, y);
+            this.addU(team, cardToPlay, x, y);
         }
 
-        if (this.sel.n !== "Mirror") this.p1.lastPlayedCard = this.sel;
-        else this.p1.lastPlayedCard = cardToPlay;
+        // Update Last Plays
+        if (card.n !== "Mirror") p.lastPlayedCard = card;
+        else p.lastPlayedCard = cardToPlay;
 
-        // Update Mirror Card Cost
-        let mirrorCard = this.allCards.find(c => c.n === "Mirror");
-        if (mirrorCard && this.p1.lastPlayedCard) {
-            mirrorCard.c = this.p1.lastPlayedCard.c + 1;
+        // Update Mirror Cost in Deck (Visual only really)
+        // We need to find the Mirror card instance in the game to update its cost?
+        // Or just update the one in hand?
+        // The one in hand is `card`.
+        if (card.n === "Mirror" && p.lastPlayedCard) {
+            card.c = p.lastPlayedCard.c + 1;
+        } else if (p.lastPlayedCard) {
+            // Find Mirror in this player's hand or pile to update its cost
+            // This is a bit tricky if multiple mirrors exist but standard game has 1.
+            let m = p.h.find(c => c.n === "Mirror") || p.pile.find(c => c.n === "Mirror");
+            if (m) m.c = p.lastPlayedCard.c + 1;
         }
 
-        let idx = this.p1.h.indexOf(this.sel);
+        // Cycle Card
+        // We use indexOf because we expect `card` to be the actual object from the hand
+        let idx = p.h.indexOf(card);
         if (idx > -1) {
-            this.p1.h.splice(idx, 1);
-            this.p1.pile.push(this.sel);
-            this.p1.h.push(this.p1.pile.shift());
+            p.h.splice(idx, 1);
+            p.pile.push(card);
+            p.h.push(p.pile.shift());
         }
-        this.sel = null;
+    }
+
+    spawn(x, y) {
+        if (this.tiebreaker) return;
+        if (!this.sel || y > this.H - 120) return;
+
+        // Local Player (Team 0)
+        this.playCard(this.p1, this.sel, x, y, 0);
+
+        // Clear selection if played
+        // Check if card was actually removed from hand to confirm play
+        if (!this.p1.h.includes(this.sel)) {
+            this.sel = null;
+        }
     }
 
     addU(tm, c, x, y) {

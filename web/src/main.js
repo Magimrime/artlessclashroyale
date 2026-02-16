@@ -59,7 +59,7 @@ class Main {
         this.t0 = 0;
         this.scrollY = 0;
         this.eng = new GameEngine();
-        this.mp = new MultiplayerManager();
+        this.mp = new MultiplayerManager(this.eng); // Pass Engine
 
         this.scale = 1.0;
         this.xOffset = 0;
@@ -193,11 +193,13 @@ class Main {
         this.mp.onState = (data) => {
             this.eng.importState(data, !this.mp.isHost);
         };
+        this.mp.onState = (data) => {
+            this.eng.importState(data, !this.mp.isHost);
+        };
         this.mp.onAction = (data) => {
-            // Host receives Spawn request
-            if (this.mp.isHost) {
-                this.eng.spawnRemote(data.cardName, data.x, data.y, data.team);
-            }
+            // Host receives Spawn request - Handled internally by RemoteHandler now.
+            // But we keep this callback if we need other actions later.
+            // console.log("Unprocessed Action:", data);
         };
         this.mp.onOpponentDisconnected = () => {
             alert("Opponent Disconnected!");

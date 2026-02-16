@@ -1,5 +1,10 @@
+import RemoteInputHandler from './RemoteInputHandler.js';
+
 export default class MultiplayerManager {
-    constructor() {
+    constructor(gameEngine) {
+        this.eng = gameEngine;
+        this.remoteHandler = new RemoteInputHandler(this.eng);
+
         this.peer = null;
         this.conn = null;
         this.code = null;
@@ -8,8 +13,7 @@ export default class MultiplayerManager {
         // Callbacks
         this.onJoined = null;
         this.onStart = null;
-        this.onStart = null;
-        this.onState = null; // New callback for state sync
+        this.onState = null;
         this.onAction = null;
         this.onOpponentDisconnected = null;
 
@@ -28,11 +32,7 @@ export default class MultiplayerManager {
         this.code = Math.floor(10000 + Math.random() * 90000).toString();
         this.isHost = true;
 
-        // ID format: clash-clone-gemini-{CODE}
-        // Using a common prefix helps, but PeerJS IDs must be unique. 
-        // We hope the random 5-digit code is unique enough for this demo.
         const peerId = `clash-clone-gemini-${this.code}`;
-
         console.log(`Initializing Peer with ID: ${peerId}`);
 
         try {
@@ -49,7 +49,6 @@ export default class MultiplayerManager {
             });
 
             this.peer.on('connection', (conn) => {
-                console.log("Incoming connection...");
                 this.setupConnection(conn);
             });
 
@@ -126,7 +125,7 @@ export default class MultiplayerManager {
         this.conn = conn;
 
         this.conn.on('data', (data) => {
-            console.log("Received data:", data);
+            // console.log("Received data:", data); // Verbose
             this.handleMessage(data);
         });
 
@@ -136,7 +135,6 @@ export default class MultiplayerManager {
         });
 
         if (this.isHost) {
-            // Wait a sec then start? Or just start immediately.
             setTimeout(() => {
                 this.gameStarted = true;
                 this.send({ type: 'start', seed: this.seed }); // Send Seed
@@ -148,35 +146,18 @@ export default class MultiplayerManager {
     handleMessage(msg) {
         if (msg.type === 'start') {
             this.seed = msg.seed;
-            this.gameStarted = true;
             if (this.onStart) this.onStart(this.seed);
-        } else if (msg.type === 'error') {
-            alert("Error: " + msg.message);
-            this.close();
-        } else if (msg.type === 'state') {
-            if (this.onState) this.onState(msg.data);
+        } else if (msg.type === 'curr_state') {
+            if (this.onState) this.onState(msg.state);
         } else if (msg.type === 'spawn') {
-            // Mirror actions
-            // { type: 'spawn', cardName: '...', x: 100, y: 200, team: 0 }
+            // Host handles spawn request securely via RemoteHandler
+            if (this.isHost) {
+                this.remoteHandler.handleSpawn(msg.cardName, msg.x, msg.y, msg.team);
+            }
+        } else if (msg.type === 'error') {
+            alert(msg.message);
+        } else {
             if (this.onAction) this.onAction(msg);
-        }
-    }
-
-    broadcastState(stateData) {
-        if (this.conn && this.conn.open) {
-            this.send({ type: 'state', data: stateData });
-        }
-    }
-
-    sendSpawn(cardName, x, y, team) {
-        if (this.conn && this.conn.open) {
-            this.send({
-                type: 'spawn',
-                cardName: cardName,
-                x: x,
-                y: y,
-                team: team
-            });
         }
     }
 
@@ -184,6 +165,16 @@ export default class MultiplayerManager {
         if (this.conn && this.conn.open) {
             this.conn.send(data);
         }
+    }
+
+    sendSpawn(cardName, x, y, team) {
+        this.send({
+            type: 'spawn',
+            cardName: cardName,
+            x: x,
+            y: y,
+            team: team
+        });
     }
 
     close() {
