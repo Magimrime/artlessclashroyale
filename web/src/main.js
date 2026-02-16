@@ -209,7 +209,14 @@ class Main {
             this.mp.close();
         };
 
-        requestAnimationFrame(() => this.loop());
+        this.lastTime = 0;
+        this.accumulator = 0;
+        this.step = 1000 / 60; // 60 TPS
+
+        requestAnimationFrame((time) => {
+            this.lastTime = time;
+            this.loop(time);
+        });
     }
 
     joinGame(code) {
@@ -452,11 +459,71 @@ class Main {
         }
     }
 
-    loop() {
-        requestAnimationFrame(() => this.loop());
+    loop(time) {
+        requestAnimationFrame((t) => this.loop(t));
 
-        // Update TWEEN
-        // TWEEN.update();
+        // Calculate delta time
+        let dt = time - this.lastTime;
+        this.lastTime = time;
+
+        // Cap dt to avoid spiral of death (e.g. if tab is backgrounded)
+        if (dt > 100) dt = 100;
+
+        this.accumulator += dt;
+
+        while (this.accumulator >= this.step) {
+            // Updated Loop Logic
+
+            // Update TWEEN
+            // TWEEN.update();
+
+            const now = Date.now();
+            if (this.state === State.CNT) {
+                if (now - this.t0 > 3000) {
+                    this.state = State.PLAY;
+                    this.eng.gameStart = now;
+                }
+            }
+
+
+            // Update Card Hover Animations
+            if (this.state === State.PLAY) {
+                for (let i = 0; i < 4; i++) {
+                    let target = 0;
+                    let rect = this.cardRects[i];
+                    // Check if mouse is within the card's horizontal bounds and roughly near the bottom
+                    if (this.mouse.x >= rect.x && this.mouse.x <= rect.x + rect.w && this.mouse.y >= rect.y - 50) {
+                        target = 40; // Slide up by 40px
+                    }
+                    // Smooth interpolation (Lerp)
+                    // Note: In fixed loop, this runs at 60fps, so 0.2 factor is consistent
+                    this.cardOffsets[i] += (target - this.cardOffsets[i]) * 0.2;
+                }
+            }
+
+            if (this.state === State.PLAY) {
+                // Host Authoritative Loop
+                if (this.eng.isMultiplayer && !this.mp.isHost) {
+                    // Client: Do nothing, just render state imported via onState
+                } else {
+                    // Host or Singleplayer: Run simulation
+                    this.eng.upd();
+                    // If Host, broadcast
+                    if (this.eng.isMultiplayer && this.mp.isHost && this.eng.aiTick % 3 === 0) { // Broadcast every 3 ticks (~50ms)
+                        if (typeof this.mp.broadcastState !== 'function') {
+                            console.error("MP Warning: broadcastState missing!", this.mp);
+                        } else {
+                            this.mp.broadcastState(this.eng.exportState());
+                        }
+                    }
+                }
+                if (this.eng.over) {
+                    this.state = State.OVER;
+                }
+            }
+
+            this.accumulator -= this.step;
+        }
 
         // Hide loading screen on first successful loop
         const loader = document.getElementById('loading-overlay');
@@ -465,49 +532,6 @@ class Main {
             setTimeout(() => loader.style.display = 'none', 500);
         }
 
-        const now = Date.now();
-        if (this.state === State.CNT) {
-            if (now - this.t0 > 3000) {
-                this.state = State.PLAY;
-                this.eng.gameStart = now;
-            }
-        }
-
-
-        // Update Card Hover Animations
-        if (this.state === State.PLAY) {
-            for (let i = 0; i < 4; i++) {
-                let target = 0;
-                let rect = this.cardRects[i];
-                // Check if mouse is within the card's horizontal bounds and roughly near the bottom
-                if (this.mouse.x >= rect.x && this.mouse.x <= rect.x + rect.w && this.mouse.y >= rect.y - 50) {
-                    target = 40; // Slide up by 40px
-                }
-                // Smooth interpolation (Lerp)
-                this.cardOffsets[i] += (target - this.cardOffsets[i]) * 0.2;
-            }
-        }
-
-        if (this.state === State.PLAY) {
-            // Host Authoritative Loop
-            if (this.eng.isMultiplayer && !this.mp.isHost) {
-                // Client: Do nothing, just render state imported via onState
-            } else {
-                // Host or Singleplayer: Run simulation
-                this.eng.upd();
-                // If Host, broadcast
-                if (this.eng.isMultiplayer && this.mp.isHost && this.eng.aiTick % 3 === 0) { // Broadcast every 3 ticks (~50ms)
-                    if (typeof this.mp.broadcastState !== 'function') {
-                        console.error("MP Warning: broadcastState missing!", this.mp);
-                    } else {
-                        this.mp.broadcastState(this.eng.exportState());
-                    }
-                }
-            }
-            if (this.eng.over) {
-                this.state = State.OVER;
-            }
-        }
         this.render();
     }
 
