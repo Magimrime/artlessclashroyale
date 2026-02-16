@@ -167,6 +167,12 @@ export default class MultiplayerManager {
         }
     }
 
+    broadcastState(stateData) {
+        if (this.conn && this.conn.open) {
+            this.send({ type: 'curr_state', state: stateData });
+        }
+    }
+
     sendSpawn(cardName, x, y, team) {
         this.send({
             type: 'spawn',

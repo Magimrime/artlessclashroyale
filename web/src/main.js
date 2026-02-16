@@ -497,7 +497,11 @@ class Main {
                 this.eng.upd();
                 // If Host, broadcast
                 if (this.eng.isMultiplayer && this.mp.isHost && this.eng.aiTick % 3 === 0) { // Broadcast every 3 ticks (~50ms)
-                    this.mp.broadcastState(this.eng.exportState());
+                    if (typeof this.mp.broadcastState !== 'function') {
+                        console.error("MP Warning: broadcastState missing!", this.mp);
+                    } else {
+                        this.mp.broadcastState(this.eng.exportState());
+                    }
                 }
             }
             if (this.eng.over) {
