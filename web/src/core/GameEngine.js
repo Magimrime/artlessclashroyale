@@ -243,7 +243,7 @@ export default class GameEngine {
                 // Update
                 local.x = tx;
                 local.y = ty;
-                local.hp = sEnt.hp;
+                local._hp = sEnt.hp; // Bypass setter logic!
                 local.tm = tm;
                 local.st = sEnt.st;
                 local.fr = sEnt.fr;
@@ -263,14 +263,14 @@ export default class GameEngine {
                     let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - tx, e.y - ty) < 20); // Width allowed
                     if (existing) {
                         existing.id = sEnt.id;
-                        existing.hp = sEnt.hp;
+                        existing._hp = sEnt.hp; // Bypass setter
                     }
                 } else {
                     let c = this.getCard(sEnt.n);
                     if (c) {
                         let t = new Troop(tm, tx, ty, c);
                         t.id = sEnt.id;
-                        t.hp = sEnt.hp;
+                        t._hp = sEnt.hp; // Bypass setter
                         t.mhp = sEnt.mhp;
                         t.atk = sEnt.atk;
                         t.cd = sEnt.cd;

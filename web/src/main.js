@@ -1247,7 +1247,17 @@ class Main {
 
 
         // HP Bar
-        if (e.hp < e.mhp) {
+        // HP Bar / Shield Bar
+        if (e.shield > 0) {
+            if (name === "Dark Prince" && Math.random() < 0.01) console.log("DP Shield Render:", e.shield, e.maxShield); // Debug
+            // Purple Shield Bar
+            let shPct = Math.max(0, e.shield / e.maxShield);
+            let barW = 30;
+            ctx.fillStyle = "#4B0082"; // Dark Indigo background
+            ctx.fillRect(x - barW / 2, y - radius - 10, barW, 4);
+            ctx.fillStyle = "#DDA0DD"; // Plum/Purple foreground
+            ctx.fillRect(x - barW / 2, y - radius - 10, barW * shPct, 4);
+        } else if (e.hp < e.mhp) {
             let hpPct = Math.max(0, e.hp / e.mhp);
             let barW = 30;
             ctx.fillStyle = "red";
