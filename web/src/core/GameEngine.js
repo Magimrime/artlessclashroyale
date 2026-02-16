@@ -13,6 +13,8 @@ export default class GameEngine {
         this.H = 960;
         this.RIV_Y = 400;
 
+        this.seed = 12345; // Default seed
+
         this.p1 = null;
         this.p2 = null;
         this.ents = [];
@@ -134,6 +136,18 @@ export default class GameEngine {
 
     setMultiplayer(enabled) {
         this.isMultiplayer = enabled;
+    }
+
+    setSeed(s) {
+        this.seed = s;
+    }
+
+    random() {
+        // Mulberry32
+        let t = this.seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
 
     spawnRemote(cardName, x, y, team) {
@@ -549,13 +563,13 @@ export default class GameEngine {
             this.ents.push(new Troop(tm, x + 10, y + 10, c));
         } else if (c.n === "Minion Horde") {
             for (let i = 0; i < 6; i++)
-                this.ents.push(new Troop(tm, x + Math.random() * 50 - 25, y + Math.random() * 50 - 25, this.getCard("Minions")));
+                this.ents.push(new Troop(tm, x + this.random() * 50 - 25, y + this.random() * 50 - 25, this.getCard("Minions")));
         } else if (c.n === "Skeleton Army") {
             for (let i = 0; i < 15; i++)
-                this.ents.push(new Troop(tm, x + Math.random() * 60 - 30, y + Math.random() * 60 - 30, this.getCard("Skeletons")));
+                this.ents.push(new Troop(tm, x + this.random() * 60 - 30, y + this.random() * 60 - 30, this.getCard("Skeletons")));
         } else if (c.n === "Bats") {
             for (let i = 0; i < 5; i++)
-                this.ents.push(new Troop(tm, x + Math.random() * 40 - 20, y + Math.random() * 40 - 20, c));
+                this.ents.push(new Troop(tm, x + this.random() * 40 - 20, y + this.random() * 40 - 20, c));
         } else if (c.n === "Barbarians") {
             this.ents.push(new Troop(tm, x - 12, y - 12, c));
             this.ents.push(new Troop(tm, x + 12, y - 12, c));
@@ -737,8 +751,8 @@ export default class GameEngine {
                     if (dist < req) {
                         let pen = req - dist;
                         if (dist === 0) {
-                            dx = Math.random() - 0.5;
-                            dy = Math.random() - 0.5;
+                            dx = this.random() - 0.5;
+                            dy = this.random() - 0.5;
                             dist = 0.1;
                         }
                         u.x += (dx / dist) * pen;
@@ -758,8 +772,8 @@ export default class GameEngine {
                     let pen = r - d;
                     if (d === 0) {
                         d = 0.1;
-                        dx = Math.random() - 0.5;
-                        dy = Math.random() - 0.5;
+                        dx = this.random() - 0.5;
+                        dy = this.random() - 0.5;
                     }
 
                     if (a.mass > b.mass) {

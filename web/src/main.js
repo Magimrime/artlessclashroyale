@@ -185,7 +185,8 @@ class Main {
         this.mp.onJoined = (idx) => {
             console.log("Joined as Player", idx);
         };
-        this.mp.onStart = () => {
+        this.mp.onStart = (seed) => {
+            if (seed) this.eng.setSeed(seed);
             this.startMultiplayerGame();
         };
         this.mp.onAction = (data) => {
