@@ -59,7 +59,8 @@ class Main {
         this.t0 = 0;
         this.scrollY = 0;
         this.eng = new GameEngine();
-        this.mp = new MultiplayerManager(this.eng); // Pass Engine
+        this.server = new GameEngine(); // Server Simulation
+        this.mp = new MultiplayerManager(this.server); // Pass Server
 
         this.scale = 1.0;
         this.xOffset = 0;
@@ -187,11 +188,8 @@ class Main {
             this.mp.isHost = (idx === 0); // Assuming player 0 is host
         };
         this.mp.onStart = (seed) => {
-            if (seed) this.eng.setSeed(seed);
+            if (seed) this.server.setSeed(seed);
             this.startMultiplayerGame();
-        };
-        this.mp.onState = (data) => {
-            this.eng.importState(data, !this.mp.isHost);
         };
         this.mp.onState = (data) => {
             this.eng.importState(data, !this.mp.isHost);
@@ -202,10 +200,13 @@ class Main {
             // console.log("Unprocessed Action:", data);
         };
         this.mp.onOpponentDisconnected = () => {
+            if (this.state === State.OVER) return; // Prevent alert if game is already over
             alert("Opponent Disconnected!");
             this.state = State.TITLE;
             this.eng.setMultiplayer(false);
+            this.server.setMultiplayer(false);
             this.eng.reset();
+            this.server.reset();
             this.mp.close();
         };
 
@@ -241,12 +242,18 @@ class Main {
 
     startMultiplayerGame() {
         this.eng.setMultiplayer(true);
-        this.eng.reset(); // Resets game, but keeps MP flag if we set it after? No, reset() clears ents.
-        this.eng.setMultiplayer(true); // Ensure it's set
+        this.server.setMultiplayer(true);
+
+        // Sync Deck to Server
+        this.server.myDeck = this.eng.myDeck;
+
+        this.server.reset();
+        this.eng.reset();
 
         // Disable Debug in MP
         this.eng.debugView = false;
         this.eng.debugEnemyElixir = false;
+        this.server.debugView = false;
 
         this.state = State.CNT;
         this.t0 = Date.now();
@@ -289,8 +296,15 @@ class Main {
             if (this.contains(this.playBtn, x, y)) {
                 if (this.eng.myDeck.length === 8) {
                     this.eng.setMultiplayer(false); // Single player
+                    this.server.setMultiplayer(false);
+
+                    // Sync Deck
+                    this.server.myDeck = this.eng.myDeck;
+
                     this.state = State.CNT;
                     this.t0 = Date.now();
+
+                    this.server.reset();
                     this.eng.reset();
                 }
             } else if (this.contains(this.deckBtn, x, y)) {
@@ -421,27 +435,27 @@ class Main {
 
                 if (this.eng.isMultiplayer && !this.mp.isHost) {
                     // Client: Send Spawn Request
-                    // We need to verify validity locally purely for UI feedback? 
-                    // Or just send it.
-                    // NOTE: We used to call spawn() which checked elixir.
-                    // Client should probably predictively check elixir but for "simple mirror" asking host is safest.
-                    // But let's check elixir locally for responsiveness of UI (graying out etc)
-                    // Actually, just send it.
                     if (this.eng.sel) {
-                        this.mp.sendSpawn(this.eng.sel.n, rx, ry, 0); // Sent as Team 0 (My perspective)
-                        // We clear selection locally for UI feedback?
-                        // Maybe wait for next state update to see if elixir dropped.
+                        // Send as Team 1 if Client (since Client is P2)
+                        // Actually, just send (!isHost ? 1 : 0)
+                        let myTeam = this.mp.isHost ? 0 : 1;
+                        this.mp.sendSpawn(this.eng.sel.n, rx, ry, myTeam);
                         this.eng.sel = null;
                     }
                 } else {
                     // Host or Singleplayer
-                    this.eng.spawn(rx, ry);
+                    if (this.eng.sel) {
+                        this.server.spawn(rx, ry);
+                        this.eng.sel = null;
+                    }
                 }
             }
         } else if (this.state === State.OVER && this.contains(this.exitBtn, x, y)) {
             if (this.eng.isMultiplayer) {
+                this.mp.onOpponentDisconnected = null; // Prevent alert on self-close
                 this.mp.close();
                 this.eng.setMultiplayer(false);
+                this.server.setMultiplayer(false);
             }
             if (this.eng.win === 0 && !this.eng.isMultiplayer) {
                 let newC = this.eng.unlockRandomCard();
@@ -506,16 +520,20 @@ class Main {
                 if (this.eng.isMultiplayer && !this.mp.isHost) {
                     // Client: Do nothing, just render state imported via onState
                 } else {
-                    // Host or Singleplayer: Run simulation
-                    this.eng.upd();
-                    // If Host, broadcast
-                    if (this.eng.isMultiplayer && this.mp.isHost && this.eng.aiTick % 3 === 0) { // Broadcast every 3 ticks (~50ms)
+                    // Host or Singleplayer: Run simulation on SERVER
+                    this.server.upd();
+
+                    // Host: broadcast derived state
+                    if (this.server.isMultiplayer && this.mp.isHost && this.server.aiTick % 3 === 0) { // Broadcast every 3 ticks (~50ms)
                         if (typeof this.mp.broadcastState !== 'function') {
                             console.error("MP Warning: broadcastState missing!", this.mp);
                         } else {
-                            this.mp.broadcastState(this.eng.exportState());
+                            this.mp.broadcastState(this.server.exportState());
                         }
                     }
+
+                    // Host: Sync Display Engine to Server (Mirror)
+                    this.eng.importState(this.server.exportState(), false);
                 }
                 if (this.eng.over) {
                     this.state = State.OVER;
