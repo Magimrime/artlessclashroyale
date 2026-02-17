@@ -203,10 +203,13 @@ export default class GameEngine {
     }
 
     importState(data, flip) {
+        // 1. Strict Packet Ordering: Ignore older or duplicate states
+        if (data.t <= this.aiTick) return;
+
         this.aiTick = data.t;
         this.over = data.ov;
         this.tiebreaker = data.tie;
-        if (data.win !== undefined) this.win = data.win; // Or infer
+        if (data.win !== undefined) this.win = data.win;
 
         // Sync Elixir and Hand
         if (flip) {
@@ -226,8 +229,11 @@ export default class GameEngine {
 
         // ENTITIES
         data.ents.forEach(sEnt => {
-            serverIds.add(sEnt.id);
-            let local = this.ents.find(e => e.id === sEnt.id);
+            // 2. Strict ID Type Enforcing
+            let id = Number(sEnt.id);
+            serverIds.add(id);
+
+            let local = this.ents.find(e => e.id === id);
 
             let tx = sEnt.x;
             let ty = sEnt.y;
@@ -240,10 +246,11 @@ export default class GameEngine {
             }
 
             if (local) {
-                // Update
+                // Update existing
+                // TELEPORT to latest state (no interpolation)
                 local.x = tx;
                 local.y = ty;
-                local._hp = sEnt.hp; // Bypass setter logic!
+                local._hp = sEnt.hp;
                 local.tm = tm;
                 local.st = sEnt.st;
                 local.fr = sEnt.fr;
@@ -258,19 +265,21 @@ export default class GameEngine {
                     local.maxShield = sEnt.msh;
                 }
             } else {
-                // Create
+                // Create new
+                // Check if it's a Tower (Special handling for persistent IDs)
                 if (sEnt.n === "Tower") {
-                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - tx, e.y - ty) < 20); // Width allowed
+                    // Try to find matching tower by position if ID mismatch (shouldn't happen with strict IDs but safe fallback)
+                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - tx, e.y - ty) < 20);
                     if (existing) {
-                        existing.id = sEnt.id;
-                        existing._hp = sEnt.hp; // Bypass setter
+                        existing.id = id; // Sync ID
+                        existing._hp = sEnt.hp;
                     }
                 } else {
                     let c = this.getCard(sEnt.n);
                     if (c) {
                         let t = new Troop(tm, tx, ty, c);
-                        t.id = sEnt.id;
-                        t._hp = sEnt.hp; // Bypass setter
+                        t.id = id;
+                        t._hp = sEnt.hp;
                         t.mhp = sEnt.mhp;
                         t.atk = sEnt.atk;
                         t.cd = sEnt.cd;
@@ -281,23 +290,18 @@ export default class GameEngine {
                         }
                         this.ents.push(t);
                     } else if (sEnt.n === "Building") {
-                        let b = new Building(tm, tx, ty, this.getCard("Cannon")); // Fallback? Need Card Name for Building?
-                        // Building IS an Entity. Usually created from Card.
-                        // But `sEnt.n` might be "Building" if we used constructor name?
-                        // If it's a specific building card, n should be Card Name.
-                        // Checked export: `e.c ? e.c.n : e.constructor.name`.
-                        // Buildings usually have `c` (Card).
-                        // So `sEnt.n` should be "Cannon", "Tesla", etc.
-                        // Code above handles it via `getCard`.
-                        // If it falls through to "Building", it's likely an error or generic building without card?
+                        // Generic fallback (rare)
+                        let b = new Building(tm, tx, ty, this.getCard("Cannon"));
+                        b.id = id;
+                        this.ents.push(b);
                     }
                 }
             }
         });
 
         // Remove dead/missing
+        // Filter out entities that are NOT in the server's list
         this.ents = this.ents.filter(e => {
-            // REMOVED THE TOWER CHECK HERE TO ALLOW DELETION
             return serverIds.has(e.id);
         });
 
@@ -319,7 +323,6 @@ export default class GameEngine {
                     tm = 1 - tm;
                 }
 
-                // Create simple object for rendering
                 this.projs.push({
                     x: tx, y: ty, tx: ttx, ty: tty, tm: tm, rad: p.r,
                     isLog: p.log, isRolling: p.roll, poison: p.poi, graveyard: p.gy, isHeal: p.heal
