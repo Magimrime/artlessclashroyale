@@ -525,7 +525,7 @@ class Main {
                     this.server.upd();
 
                     // Host: broadcast derived state
-                    if (this.server.isMultiplayer && this.mp.isHost && this.server.aiTick % 3 === 0) { // Broadcast every 3 ticks (~50ms)
+                    if (this.server.isMultiplayer && this.mp.isHost) { // Broadcast every tick (~16ms)
                         if (typeof this.mp.broadcastState !== 'function') {
                             console.error("MP Warning: broadcastState missing!", this.mp);
                         } else {
