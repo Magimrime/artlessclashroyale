@@ -520,11 +520,12 @@ export default class GameEngine {
         this.isDoubleElixir = false;
         this.tiebreaker = false;
         this.doubleElixirAnim = 0;
+        this.nextEntityId = 0;
 
         this.p1.pile = [...this.myDeck];
         // Shuffle p1 pile
         for (let i = this.p1.pile.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(this.random() * (i + 1));
             [this.p1.pile[i], this.p1.pile[j]] = [this.p1.pile[j], this.p1.pile[i]];
         }
         this.p1.h = [];
@@ -544,7 +545,7 @@ export default class GameEngine {
                 // Fill with random?
                 let pool = [...this.allCards];
                 while (this.p2.pile.length < 8) {
-                    let c = pool[Math.floor(Math.random() * pool.length)];
+                    let c = pool[Math.floor(this.random() * pool.length)];
                     if (!this.p2.pile.includes(c)) this.p2.pile.push(c);
                 }
             }
@@ -555,7 +556,7 @@ export default class GameEngine {
 
             // Shuffle pool
             for (let i = enemyPool.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
+                const j = Math.floor(this.random() * (i + 1));
                 [enemyPool[i], enemyPool[j]] = [enemyPool[j], enemyPool[i]];
             }
 
@@ -565,7 +566,7 @@ export default class GameEngine {
 
         // Shuffle p2 pile (important for fair draw order even if deck is known)
         for (let i = this.p2.pile.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(this.random() * (i + 1));
             [this.p2.pile[i], this.p2.pile[j]] = [this.p2.pile[j], this.p2.pile[i]];
         }
 
@@ -1104,7 +1105,7 @@ export default class GameEngine {
     }
 
     handleCrateDeath(building) {
-        let rand = Math.floor(Math.random() * 3);
+        let rand = Math.floor(this.random() * 3);
         if (rand === 0) {
             // Spawn 3 Skeletons
             let skelCard = this.getCard("Skeletons");
@@ -1114,7 +1115,7 @@ export default class GameEngine {
         } else if (rand === 1) {
             // Spawn Spirit
             let spirits = ["Fire Spirit", "Ice Spirit", "Electro Spirit", "Heal Spirit"];
-            let sName = spirits[Math.floor(Math.random() * spirits.length)];
+            let sName = spirits[Math.floor(this.random() * spirits.length)];
             this.ents.push(new Troop(building.tm, building.x, building.y, this.getCard(sName)));
         } else {
             // Explode (240 dmg, 60 radius)

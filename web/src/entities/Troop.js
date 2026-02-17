@@ -505,7 +505,7 @@ export default class Troop extends Entity {
 
                 if (this.stuckTimer > 40) {
                     this.isStuck = true;
-                    if (this.stuckDir === 0) this.stuckDir = (Math.random() < 0.5) ? 1 : -1;
+                    if (this.stuckDir === 0) this.stuckDir = (g.random() < 0.5) ? 1 : -1;
                 }
             } else {
                 this.stuckTimer = 0;

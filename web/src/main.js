@@ -244,8 +244,9 @@ class Main {
         this.eng.setMultiplayer(true);
         this.server.setMultiplayer(true);
 
-        // Sync Deck to Server
-        this.server.myDeck = this.eng.myDeck;
+        // Sync Deck to Server (Deep Copy to Unreference)
+        // We map each card to a new object to break references.
+        this.server.myDeck = this.eng.myDeck.map(c => ({ ...c }));
 
         this.server.reset();
         this.eng.reset();
