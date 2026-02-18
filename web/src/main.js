@@ -526,7 +526,20 @@ class Main {
             if (this.state === State.PLAY) {
                 // Host Authoritative Loop
                 if (this.eng.isMultiplayer && !this.mp.isHost) {
-                    // Client: Do nothing, just render state imported via onState
+                    // Client: INTERPOLATION
+                    // We render 'x' ticks behind the server to allow for buffering.
+                    // Server Tick is `this.eng.aiTick` (updated via importState).
+                    // We want to interpolate between aiTick-Wait and aiTick.
+                    // Let's assume 100ms latency buffer target. 
+                    // Ticks are 16.6ms (60tps) or 50ms (20tps)? 
+                    // Server upd() runs at 60tps. Packets sent every 1 (now).
+                    // So we receive packets at 60Hz ideally.
+                    // let renderDelay = 6.0; // 6 ticks = 100ms
+                    // Actually, if we receive packet T, we want to render T-Delay.
+
+                    let renderTime = this.eng.aiTick - 6.0;
+                    this.eng.interpolateEntities(renderTime);
+
                 } else {
                     // Host or Singleplayer: Run simulation on SERVER
                     if (this.eng.isMultiplayer) {
@@ -542,7 +555,7 @@ class Main {
 
                     // Host: broadcast derived state
                     if (this.server.isMultiplayer && this.mp.isHost) { // Broadcast every tick (~16ms)
-                        console.log("Broadcasting state...");
+                        // console.log("Broadcasting state...");
                         if (typeof this.mp.broadcastState !== 'function') {
                             console.error("MP Warning: broadcastState missing!", this.mp);
                         } else {

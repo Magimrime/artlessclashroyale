@@ -16,21 +16,30 @@ export default class GameEngine {
         this.seed = 12345; // Default seed
         this.nextEntityId = 1;
 
-        this.p1 = null;
-        this.p2 = null;
-        this.ents = [];
-        this.projs = [];
-        this.t1K = null; this.t1L = null; this.t1R = null;
-        this.t2K = null; this.t2L = null; this.t2R = null;
-        this.over = false;
-        this.win = 0;
-        this.aiTick = 0;
-        this.gameStart = 0;
-        this.isDoubleElixir = false;
-        this.tiebreaker = false;
-        this.doubleElixirAnim = 0;
+        this.allCards = [];
         this.unlockedCards = [];
         this.myDeck = [];
+        this.enemyDeckSelection = [];
+
+        this.ents = [];
+        this.projs = [];
+
+        this.p1 = new Player(0);
+        this.p2 = new Player(1);
+
+        this.aiTick = 0;
+        this.gameStart = 0;
+        this.over = false;
+        this.win = 0;
+
+        // Multiplayer Stats
+        this.isMultiplayer = false;
+        this.serverParams = null; // If client, stores server config
+
+        // SNAPSHOT INTERPOLATION
+        this.stateBuffer = []; // { t: time, ents: [] }
+
+        this.doubleElixirAnim = 0;
         this.sel = null;
         this.cheated = false;
         this.gamesPlayed = 0;
@@ -203,22 +212,29 @@ export default class GameEngine {
     }
 
     importState(data, flip) {
-        // 1. Strict Packet Ordering: Ignore older or duplicate states
+        // 1. Buffer the state
+        // We still check ordering for safety, but buffering handles it naturally if sorted.
         if (data.t <= this.aiTick) {
-            // console.warn(`Skipping stale packet: In ${data.t} <= Cur ${this.aiTick}`);
-            return;
+            // console.warn("Old packet");
+            // Just ignore old packets for logic state (aiTick)
+            // For buffer, we could insert, but let's just append new ones. 
+            // If data.t is older than our newest buffer entry, it's stale/out-of-order.
+            let last = this.stateBuffer[this.stateBuffer.length - 1];
+            if (last && data.t <= last.t) {
+                return;
+            }
         }
 
-        this.aiTick = data.t;
+        // Global State (Apply immediately for logic, though ideally this is also buffered)
+        // For visual smoothness, primarily Entity positions need interpolation.
         this.over = data.ov;
         this.tiebreaker = data.tie;
         if (data.win !== undefined) this.win = data.win;
 
-        // Sync Elixir and Hand
+        // Sync Elixir and Hand (Keep immediate for now)
         if (flip) {
             this.p1.elx = data.el2;
             this.p2.elx = data.el1;
-            // Sync Hands: P1 (Client) gets Host P2's hand
             this.syncHand(this.p1, data.h2);
             this.syncHand(this.p2, data.h1);
         } else {
@@ -228,73 +244,161 @@ export default class GameEngine {
             this.syncHand(this.p2, data.h2);
         }
 
-        const serverIds = new Set();
-
-        // ENTITIES
-        data.ents.forEach(sEnt => {
-            // 2. Strict ID Type Enforcing
+        // Process Entities for Buffer
+        // We need to transform coordinates NOW based on flip, so the buffer contains "Local Screen Coordinates"
+        let processedEnts = data.ents.map(sEnt => {
             let id = Number(sEnt.id);
-            serverIds.add(id);
-
-            let local = this.ents.find(e => e.id === id);
-
             let tx = sEnt.x;
             let ty = sEnt.y;
             let tm = sEnt.tm;
-
             if (flip) {
                 tx = this.W - tx;
                 ty = 800 - ty;
                 tm = 1 - tm;
             }
+            return {
+                id: id,
+                x: tx, y: ty,
+                hp: sEnt.hp, mhp: sEnt.mhp,
+                tm: tm, n: sEnt.n,
+                st: sEnt.st, fr: sEnt.fr, rt: sEnt.rt,
+                atk: sEnt.atk, cd: sEnt.cd, spT: sEnt.spT,
+                sh: sEnt.sh, msh: sEnt.msh
+            };
+        });
+
+        // Process Projs 
+        let processedProjs = [];
+        if (data.projs) {
+            processedProjs = data.projs.map(p => {
+                let tx = p.x; let ty = p.y;
+                let ttx = p.tx; let tty = p.ty;
+                let tm = p.tm;
+                if (flip) {
+                    tx = this.W - tx; ty = 800 - ty;
+                    ttx = this.W - ttx; tty = 800 - tty;
+                    tm = 1 - tm;
+                }
+                return {
+                    x: tx, y: ty, tx: ttx, ty: tty, tm: tm, rad: p.r,
+                    isLog: p.log, isRolling: p.roll, poison: p.poi, graveyard: p.gy, isHeal: p.heal
+                };
+            });
+        }
+
+        // Push to Buffer
+        this.stateBuffer.push({
+            t: data.t, // Server Tick
+            ents: processedEnts,
+            projs: processedProjs
+        });
+
+        // Prune old buffer (keep last 1 second approx)
+        if (this.stateBuffer.length > 60) {
+            this.stateBuffer.shift();
+        }
+
+        // Update latest tick knowledge
+        this.aiTick = data.t;
+    }
+
+    interpolateEntities(renderTime) {
+        // Find Prev and Next snapshots
+        let prev = null;
+        let next = null;
+
+        for (let i = 0; i < this.stateBuffer.length; i++) {
+            if (this.stateBuffer[i].t <= renderTime) {
+                prev = this.stateBuffer[i];
+            } else {
+                next = this.stateBuffer[i];
+                break;
+            }
+        }
+
+        // If no data yet
+        if (!prev && !next) return;
+
+        if (!prev && next) {
+            // Startup condition or severe lag where we only have future?
+            // Just snap to Next.
+            this.applySnapshot(next);
+            return;
+        }
+
+        if (prev && !next) {
+            // We are ahead of server buffer (Lag or just run out)
+            // Snap to Prev (Latest available)
+            this.applySnapshot(prev);
+            return;
+        }
+
+        // Interpolate
+        let total = next.t - prev.t;
+        let diff = renderTime - prev.t;
+        let alpha = diff / total; // 0 to 1
+        if (total === 0) alpha = 0; // Should not happen if t is unique
+
+        const serverIds = new Set();
+
+        // Iterate Next for targets to move TO
+        next.ents.forEach(nEnt => {
+            let id = nEnt.id;
+            serverIds.add(id);
+
+            let pEnt = prev.ents.find(e => e.id === id);
+
+            // Find Local Entity to update
+            let local = this.ents.find(e => e.id === id);
+
+            let x, y;
+            if (pEnt) {
+                // Lerp
+                x = pEnt.x + (nEnt.x - pEnt.x) * alpha;
+                y = pEnt.y + (nEnt.y - pEnt.y) * alpha;
+            } else {
+                // New entity in Next: Lerp from self location if exists? Or snap?
+                // Snap to current Next pos.
+                x = nEnt.x;
+                y = nEnt.y;
+            }
 
             if (local) {
-                // Update existing
-                // TELEPORT to latest state (no interpolation)
-                local.x = tx;
-                local.y = ty;
-                local._hp = sEnt.hp;
-                local.tm = tm;
-                local.st = sEnt.st;
-                local.fr = sEnt.fr;
-                local.rt = sEnt.rt;
-
-                // Anim flags
-                local.atk = sEnt.atk;
-                local.cd = sEnt.cd;
-                local.spT = sEnt.spT;
-                if (local.shield !== undefined) {
-                    local.shield = sEnt.sh;
-                    local.maxShield = sEnt.msh;
-                }
+                local.x = x;
+                local.y = y;
+                // Update props from Next (most current known intent)
+                local._hp = nEnt.hp;
+                local.shield = nEnt.sh;
+                local.maxShield = nEnt.msh;
+                local.st = nEnt.st; // State
+                local.tm = nEnt.tm;
+                // Sync animation/action flags from Prev or Next? 
+                // Next is "future", Prev is "past".
+                // If we want smooth anims, maybe Next?
+                local.atk = nEnt.atk;
+                local.cd = nEnt.cd;
+                local.spT = nEnt.spT;
             } else {
-                // Create new
-                // Check if it's a Tower (Special handling for persistent IDs)
-                if (sEnt.n === "Tower") {
-                    // Try to find matching tower by position if ID mismatch (shouldn't happen with strict IDs but safe fallback)
-                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - tx, e.y - ty) < 20);
+                // Create
+                // Check if it's a Tower (fallback)
+                if (nEnt.n === "Tower") {
+                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - x, e.y - y) < 20);
                     if (existing) {
-                        existing.id = id; // Sync ID
-                        existing._hp = sEnt.hp;
+                        existing.id = id;
+                        existing._hp = nEnt.hp;
                     }
                 } else {
-                    let c = this.getCard(sEnt.n);
+                    let c = this.getCard(nEnt.n);
                     if (c) {
-                        let t = new Troop(tm, tx, ty, c);
+                        let t = new Troop(nEnt.tm, x, y, c);
                         t.id = id;
-                        t._hp = sEnt.hp;
-                        t.mhp = sEnt.mhp;
-                        t.atk = sEnt.atk;
-                        t.cd = sEnt.cd;
-                        t.spT = sEnt.spT;
-                        if (t.shield !== undefined) {
-                            t.shield = sEnt.sh;
-                            t.maxShield = sEnt.msh;
-                        }
+                        t._hp = nEnt.hp;
+                        t.mhp = nEnt.mhp;
+                        if (t.shield !== undefined) { t.shield = nEnt.sh; t.maxShield = nEnt.msh; }
+                        t.atk = nEnt.atk;
                         this.ents.push(t);
-                    } else if (sEnt.n === "Building") {
-                        // Generic fallback (rare)
-                        let b = new Building(tm, tx, ty, this.getCard("Cannon"));
+                    } else if (nEnt.n === "Building") {
+                        let b = new Building(nEnt.tm, x, y, this.getCard("Cannon"));
                         b.id = id;
                         this.ents.push(b);
                     }
@@ -302,36 +406,61 @@ export default class GameEngine {
             }
         });
 
-        // Remove dead/missing
-        // Filter out entities that are NOT in the server's list
+        // Remove Interpolated Ghosts
+        // If an entity is NOT in Next, it is effectively dead by the time we reach Next's timestamp.
+        // So we remove it.
         this.ents = this.ents.filter(e => {
             return serverIds.has(e.id);
         });
 
-        // PROJECTILES (Visual Sync)
-        this.projs = []; // Clear local projs
-        if (data.projs) {
-            data.projs.forEach(p => {
-                let tx = p.x;
-                let ty = p.y;
-                let ttx = p.tx;
-                let tty = p.ty;
-                let tm = p.tm;
+        // Projectiles: Use Prev's projectiles
+        // Since projectiles have no IDs, we can't interpolate them easily without a matching heuristic.
+        // Showing them at Prev's time is consistent with the world state.
+        this.projs = prev.projs;
+    }
 
-                if (flip) {
-                    tx = this.W - tx;
-                    ty = 800 - ty;
-                    ttx = this.W - ttx;
-                    tty = 800 - tty;
-                    tm = 1 - tm;
+    applySnapshot(snap) {
+        const serverIds = new Set();
+        snap.ents.forEach(sEnt => {
+            serverIds.add(sEnt.id);
+            let local = this.ents.find(e => e.id === sEnt.id);
+            // Logic similar to create/update in importState but direct assignment
+            if (local) {
+                local.x = sEnt.x;
+                local.y = sEnt.y;
+                local._hp = sEnt.hp;
+                local.shield = sEnt.sh;
+                local.maxShield = sEnt.msh;
+                local.st = sEnt.st;
+                local.atk = sEnt.atk;
+            } else {
+                if (sEnt.n === "Tower") {
+                    let existing = this.ents.find(e => e instanceof Tower && Math.hypot(e.x - sEnt.x, e.y - sEnt.y) < 20);
+                    if (existing) {
+                        existing.id = sEnt.id;
+                        existing._hp = sEnt.hp;
+                    }
+                } else {
+                    let c = this.getCard(sEnt.n);
+                    if (c) {
+                        let t = new Troop(sEnt.tm, sEnt.x, sEnt.y, c);
+                        t.id = sEnt.id;
+                        t._hp = sEnt.hp;
+                        t.mhp = sEnt.mhp;
+                        if (t.shield !== undefined) { t.shield = sEnt.sh; t.maxShield = sEnt.msh; }
+                        this.ents.push(t);
+                    } else if (sEnt.n === "Building") {
+                        let b = new Building(sEnt.tm, sEnt.x, sEnt.y, this.getCard("Cannon"));
+                        b.id = sEnt.id;
+                        this.ents.push(b);
+                    }
                 }
-
-                this.projs.push({
-                    x: tx, y: ty, tx: ttx, ty: tty, tm: tm, rad: p.r,
-                    isLog: p.log, isRolling: p.roll, poison: p.poi, graveyard: p.gy, isHeal: p.heal
-                });
-            });
-        }
+            }
+        });
+        this.ents = this.ents.filter(e => {
+            return serverIds.has(e.id);
+        });
+        this.projs = snap.projs;
     }
 
     syncHand(p, cardNames) {
