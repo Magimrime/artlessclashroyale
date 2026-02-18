@@ -100,6 +100,7 @@ class Main {
     }
 
     init() {
+        console.log("%c GAME VERSION: DESYNC FIX 2.0 ", "background: #222; color: #bada55; font-size: 20px");
         this.playBtn = { x: W / 2 - 60, y: H / 2 + 40 - 150, w: 120, h: 50 };
         this.deckBtn = { x: W / 2 - 60, y: H / 2 + 100 - 150, w: 120, h: 50 };
         this.mpBtn = { x: W / 2 - 60, y: H / 2 + 160 - 150, w: 120, h: 50 };
@@ -592,6 +593,12 @@ class Main {
             ctx.font = "bold 12px Arial";
             ctx.textAlign = "left";
             ctx.fillText(`${this.visitorCount}`, 10, 20);
+
+            // DEBUG STATE ON SCREEN
+            ctx.fillStyle = "red";
+            ctx.fillText(`State: ${this.state}`, 10, 40);
+            ctx.fillText(`MP: ${this.eng.isMultiplayer} Host: ${this.mp.isHost}`, 10, 60);
+
             ctx.textAlign = "center";
 
             this.drawCenteredString("Clash Clone", W / 2, H / 2 - 50 - 150, "bold 40px Arial", "#006400");

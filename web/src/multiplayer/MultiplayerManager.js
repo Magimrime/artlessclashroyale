@@ -105,41 +105,52 @@ export default class MultiplayerManager {
     }
 
     setupConnection(conn) {
-        // Check restrictions (only relevant for Host receiving connection)
-        if (this.isHost) {
-            if (this.gameStarted || (this.conn && this.conn.open && this.conn !== conn)) {
-                console.warn("Rejecting connection: Game already full or started.");
-                conn.send({ type: 'error', message: "Game already started or full." });
-                setTimeout(() => conn.close(), 500);
-                return;
+        console.log("SetupConnection called for:", conn.peer);
+        try {
+            // Check restrictions (only relevant for Host receiving connection)
+            if (this.isHost) {
+                if (this.gameStarted || (this.conn && this.conn.open && this.conn !== conn)) {
+                    console.warn("Rejecting connection: Game already full or started.");
+                    conn.send({ type: 'error', message: "Game already started or full." });
+                    setTimeout(() => conn.close(), 500);
+                    return;
+                }
+
+                if (conn.metadata && conn.metadata.userId === this.userId) {
+                    console.warn("Rejecting connection: Same User ID.");
+                    conn.send({ type: 'error', message: "Cannot play against yourself!" });
+                    setTimeout(() => conn.close(), 500);
+                    return;
+                }
             }
 
-            if (conn.metadata && conn.metadata.userId === this.userId) {
-                console.warn("Rejecting connection: Same User ID.");
-                conn.send({ type: 'error', message: "Cannot play against yourself!" });
-                setTimeout(() => conn.close(), 500);
-                return;
+            this.conn = conn;
+
+            this.conn.on('data', (data) => {
+                // console.log("Received data:", data); // Verbose
+                this.handleMessage(data);
+            });
+
+            this.conn.on('close', () => {
+                console.log("Connection closed");
+                if (this.onOpponentDisconnected) this.onOpponentDisconnected();
+            });
+
+            if (this.isHost) {
+                console.log("Host: Verify Connection established. Scheduling start...");
+                setTimeout(() => {
+                    console.log("Host: Starting Game Sequence...");
+                    this.gameStarted = true;
+                    this.send({ type: 'start', seed: this.seed }); // Send Seed
+                    if (this.onStart) {
+                        this.onStart(this.seed);
+                    } else {
+                        console.error("MP Error: onStart callback not set!");
+                    }
+                }, 500);
             }
-        }
-
-        this.conn = conn;
-
-        this.conn.on('data', (data) => {
-            console.log("Received data:", data); // Verbose
-            this.handleMessage(data);
-        });
-
-        this.conn.on('close', () => {
-            console.log("Connection closed");
-            if (this.onOpponentDisconnected) this.onOpponentDisconnected();
-        });
-
-        if (this.isHost) {
-            setTimeout(() => {
-                this.gameStarted = true;
-                this.send({ type: 'start', seed: this.seed }); // Send Seed
-                if (this.onStart) this.onStart(this.seed);
-            }, 500);
+        } catch (e) {
+            console.error("SetupConnection CRASH:", e);
         }
     }
 

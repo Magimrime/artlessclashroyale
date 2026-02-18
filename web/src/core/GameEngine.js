@@ -205,11 +205,9 @@ export default class GameEngine {
     importState(data, flip) {
         // 1. Strict Packet Ordering: Ignore older or duplicate states
         if (data.t <= this.aiTick) {
-            console.warn(`Skipping stale packet: In ${data.t} <= Cur ${this.aiTick}`);
+            // console.warn(`Skipping stale packet: In ${data.t} <= Cur ${this.aiTick}`);
             return;
         }
-
-        console.log(`Processing Packet T=${data.t}. Entities: ${data.ents.length}`);
 
         this.aiTick = data.t;
         this.over = data.ov;
