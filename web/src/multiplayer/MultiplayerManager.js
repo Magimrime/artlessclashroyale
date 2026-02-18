@@ -125,7 +125,7 @@ export default class MultiplayerManager {
         this.conn = conn;
 
         this.conn.on('data', (data) => {
-            // console.log("Received data:", data); // Verbose
+            console.log("Received data:", data); // Verbose
             this.handleMessage(data);
         });
 

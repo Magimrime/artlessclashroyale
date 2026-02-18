@@ -477,6 +477,12 @@ class Main {
     loop(time) {
         requestAnimationFrame((t) => this.loop(t));
 
+        // Debug Loop Vitality
+        if (!this.lastDebugTime || Date.now() - this.lastDebugTime > 1000) {
+            this.lastDebugTime = Date.now();
+            console.log(`[Heartbeat] State: ${this.state}, MP: ${this.eng.isMultiplayer}, Host: ${this.mp.isHost}, Acc: ${this.accumulator.toFixed(2)}`);
+        }
+
         // Calculate delta time
         let dt = time - this.lastTime;
         this.lastTime = time;
@@ -522,10 +528,20 @@ class Main {
                     // Client: Do nothing, just render state imported via onState
                 } else {
                     // Host or Singleplayer: Run simulation on SERVER
+                    if (this.eng.isMultiplayer) {
+                        // console.log("Host Loop: running server update");
+                    }
                     this.server.upd();
 
                     // Host: broadcast derived state
+                    // Debug Flags
+                    if (this.server.aiTick % 60 === 0) {
+                        console.log(`Loop Check: MP=${this.server.isMultiplayer} Host=${this.mp.isHost} Tick=${this.server.aiTick}`);
+                    }
+
+                    // Host: broadcast derived state
                     if (this.server.isMultiplayer && this.mp.isHost) { // Broadcast every tick (~16ms)
+                        console.log("Broadcasting state...");
                         if (typeof this.mp.broadcastState !== 'function') {
                             console.error("MP Warning: broadcastState missing!", this.mp);
                         } else {
