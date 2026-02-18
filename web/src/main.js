@@ -611,6 +611,7 @@ class Main {
             ctx.fillStyle = "red";
             ctx.fillText(`State: ${this.state}`, 10, 40);
             ctx.fillText(`MP: ${this.eng.isMultiplayer} Host: ${this.mp.isHost}`, 10, 60);
+            ctx.fillText(`Last Pkt: ${this.eng.aiTick} Buf: ${this.eng.stateBuffer.length}`, 10, 80);
 
             ctx.textAlign = "center";
 
