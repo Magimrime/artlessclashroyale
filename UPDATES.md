@@ -7,7 +7,7 @@ The changelog as a timeline. Versions read **`year.major.minor.patch`**:
 - **minor** — the update within that era
 - **patch** — small bug-fix releases
 
-We're currently on **26.8.0** — here's the whole road there.
+We're currently on **26.8.1** — here's the whole road there.
 
 ---
 
@@ -218,6 +218,9 @@ The game is pixel art now — every troop, tower, building, projectile, effect, 
   sprite, the zap card is the hand-drawn strike, and the old symbol-drop and sprite-sheet code is deleted. If the
   art fails to load, or the renderer asks for a sprite that is not in the set, the game stops on a **crash screen**
   that names what is missing instead of running without it.
+- **26.8.1** — The placement ghost is the size the unit will be on the field (the Cannon at 3×). Nine more
+  plain-shape fallbacks found and removed: the ghost, the thrown axe, the tower block, the unit name, the gear icon,
+  the evo gem, the two text helpers, the elixir badge and the dynamite.
 
 ---
 

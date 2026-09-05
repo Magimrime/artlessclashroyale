@@ -3,7 +3,7 @@
 // fresh deploy always wins when online, and the cached copy carries the game
 // when there's no connection. /api/* (saves, multiplayer rooms) is never
 // cached — those must always hit the real server.
-const CACHE = 'acr-26.8.0';
+const CACHE = 'acr-26.8.1';
 
 // The full app shell, precached at install so the game works offline even if
 // the player installs it and immediately loses connection.

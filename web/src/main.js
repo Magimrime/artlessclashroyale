@@ -1402,31 +1402,14 @@ class Main {
                     const ghostSprite = isBuilding
                         ? "buildings/" + (c.n === "Tesla" ? "tesla-up" : BUILDING_SPRITE[c.n])
                         : (c.n === "Balloon" ? "troops/balloon" : this.px.troop(spawnOf || c.n));
+                    // Each piece at the size it will be on the field (the Cannon is 3x), still.
+                    const ghostSize = c.n === "Cannon" ? 48 : 32;
                     for (const gp of this.ghostLayout(c)) {
-                        let px = gx + gp.dx, py = gy + gp.dy;
                         ctx.globalAlpha = 0.75;
-                        if (this.px.draw(ctx, ghostSprite, px, py, 32, 0, [col, valid ? 0.35 : 0.55], 0)) {   // still, like the card
-                            ctx.globalAlpha = 1.0;
-                            continue;
-                        }
-                        ctx.globalAlpha = 0.7;
-                        ctx.fillStyle = col;
-                        if (isBuilding) {
-                            // Buildings show their VISUAL SQUARE (matches the deployed
-                            // building), not a hitbox circle.
-                            this.drawRoundRect(px - gp.r, py - gp.r, gp.r * 2, gp.r * 2, 4, true, false);
-                            ctx.globalAlpha = 1.0;
-                            ctx.strokeStyle = outline; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
-                            this.drawRoundRect(px - gp.r, py - gp.r, gp.r * 2, gp.r * 2, 4, false, false); ctx.stroke();
-                        } else {
-                            ctx.beginPath(); ctx.arc(px, py, gp.r, 0, Math.PI * 2); ctx.fill();
-                            ctx.globalAlpha = 1.0;
-                            ctx.strokeStyle = outline; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
-                            ctx.beginPath(); ctx.arc(px, py, gp.r + 1, 0, Math.PI * 2); ctx.stroke();
-                        }
-                        ctx.setLineDash([]); ctx.lineWidth = 1;
+                        this.px.draw(ctx, ghostSprite, gx + gp.dx, gy + gp.dy, ghostSize, 0, [col, valid ? 0.35 : 0.55], 0);
+                        ctx.globalAlpha = 1.0;
                     }
-                    this.drawCenteredString(c.n, gx, gy - 26, "700 11px 'Baloo 2', 'Segoe UI', sans-serif", "rgba(255,255,255,0.92)");
+                    this.px.textShadow(ctx, c.n, gx, gy - 26, 7, "rgba(255,255,255,0.92)", "center");
                 }
                 ctx.globalAlpha = 1.0;
             }
@@ -1517,23 +1500,7 @@ class Main {
                     ctx.save();
                     ctx.translate(p.x, p.y);
                     ctx.rotate(p.axeSpin || 0);
-                    if (this.px.draw(ctx, "projectiles/axe", 0, 0, 48)) { ctx.restore(); ctx.lineWidth = 1; return; }
-                    // haft (runs left→right, head on the right)
-                    ctx.fillStyle = "#7a5228";
-                    ctx.fillRect(-16, -2.5, 30, 5);
-                    ctx.fillStyle = "#5d3d1c";
-                    ctx.fillRect(-16, -2.5, 6, 5);               // darker butt end
-                    // head: a curved blade that flares out from the haft
-                    ctx.fillStyle = "#cfd8de";
-                    ctx.beginPath();
-                    ctx.moveTo(7, -4);
-                    ctx.quadraticCurveTo(22, -14, 20, 0);        // outer cutting edge
-                    ctx.quadraticCurveTo(22, 14, 7, 4);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 1.2; ctx.stroke();
-                    ctx.fillStyle = "#9aa6ae";                   // socket where head meets haft
-                    ctx.fillRect(5, -5, 5, 10);
+                    this.px.draw(ctx, "projectiles/axe", 0, 0, 48);
                     ctx.restore();
                     ctx.lineWidth = 1;
                     return;
@@ -2282,7 +2249,8 @@ class Main {
             e.dispAngle += da * 0.16;
             const tq = e.dispAngle;               // turns freely; rotated at source resolution
             const fs = isFriend ? -1 : 1;          // front = toward the enemy half
-            if (this.px.draw(ctx, `towers/${kind}-${team}-base`, x, y, S)) {
+            this.px.draw(ctx, `towers/${kind}-${team}-base`, x, y, S);
+            {
                 // The turret and vent layers share the base's 16x16 frame, so they are
                 // blitted at the base's size and position; the art carries the offset.
                 if (e.noTurret) {
@@ -2298,9 +2266,6 @@ class Main {
                     let sp = Math.max(0, (p - 0.2) / 0.8);
                     if (sp > 0) this.px.draw(ctx, `towers/king-${team}-turret`, x, y, Math.round(64 * sp), tq);
                 }
-            } else {
-                // Until the art loads: a plain team-coloured block.
-                this.drawRoundRect(x - r, y - r, r * 2, r * 2, 8, true, false); ctx.stroke();
             }
             if (e.rt > 0) this.drawVines(x, y, S, e.rt);          // caught by Vines
             ctx.lineWidth = 1;
@@ -2474,16 +2439,7 @@ class Main {
         // Unit name (white). The friend/foe side is shown by the body's faint colored
         // outline (see drawEntityBody) and the health-bar colour, not the name.
         if (name && name.length > 0 && !card) {
-            let fontSize = Math.max(9, Math.min(13, 8 + radius * 0.4));
-            if (this.px.textShadow(ctx, name, x, e._barY - (e.shield > 0 ? 9 : 4), 7, "rgba(255,255,255,0.9)", "center")) return;
-            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-            ctx.font = `${fontSize}px 'Baloo 2', 'Segoe UI', sans-serif`;
-            ctx.textAlign = "center";
-            ctx.shadowColor = "black";
-            ctx.shadowBlur = 2;
-            ctx.fillText(name, x, e._barY - (e.shield > 0 ? 9 : 4));
-            ctx.shadowBlur = 0;
-            ctx.shadowColor = "transparent";
+            this.px.textShadow(ctx, name, x, e._barY - (e.shield > 0 ? 9 : 4), 7, "rgba(255,255,255,0.9)", "center");
         }
     }
 
@@ -2556,22 +2512,7 @@ class Main {
     // A small SOLID cog: filled gear silhouette (8 squared teeth) with a punched
     // centre hole (even-odd fill, so the background shows through the middle).
     drawGearIcon(cx, cy, r) {
-        if (this.px.draw(ctx, "ui/gear", cx, cy, r * 2.4)) return;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.fillStyle = "rgba(255,255,255,0.92)";
-        ctx.beginPath();
-        const teeth = 8, inner = r * 0.74, half = (Math.PI / teeth) * 0.45;
-        for (let i = 0; i < teeth * 2; i++) {
-            const a = (i * Math.PI) / teeth;
-            const rad = i % 2 === 0 ? r : inner;
-            ctx.lineTo(Math.cos(a - half) * rad, Math.sin(a - half) * rad);
-            ctx.lineTo(Math.cos(a + half) * rad, Math.sin(a + half) * rad);
-        }
-        ctx.closePath();
-        ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2, true); // the hole
-        ctx.fill("evenodd");
-        ctx.restore();
+        this.px.draw(ctx, "ui/gear", cx, cy, r * 2.4);
     }
 
     // Flat solid menu colour in the chosen style.
@@ -2776,15 +2717,7 @@ class Main {
     drawEvoGem(gx, gy, radius, glow) {
         ctx.save();
         if (glow) { ctx.shadowColor = "#e08bff"; ctx.shadowBlur = 14; }
-        if (this.px.draw(ctx, "ui/evo-gem", gx, gy, Math.max(8, Math.round(radius * 2.4)))) { ctx.restore(); return; }
-        ctx.fillStyle = glow ? "#c45cff" : "rgba(150,90,200,0.75)";
-        ctx.beginPath(); ctx.arc(gx, gy, radius, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(gx, gy, radius, 0, Math.PI * 2); ctx.stroke();
-        // facet highlight
-        ctx.fillStyle = "rgba(255,255,255,0.55)";
-        ctx.beginPath(); ctx.arc(gx - radius * 0.3, gy - radius * 0.3, radius * 0.28, 0, Math.PI * 2); ctx.fill();
+        this.px.draw(ctx, "ui/evo-gem", gx, gy, Math.max(8, Math.round(radius * 2.4)));
         ctx.restore();
     }
 
@@ -3175,26 +3108,13 @@ class Main {
     // Text is the bitmap font now. `font` is the old CSS string the call sites
     // already pass — only its px size matters — so nothing upstream had to change.
     fontPx(font) { const m = /([0-9]+(?:[.][0-9]+)?)px/.exec(font || ""); return m ? parseFloat(m[1]) : 14; }
-    txt(str, x, y, size, color, align = "left") {
-        if (this.px.text(ctx, str, x, y, size, color, align)) return;
-        ctx.fillStyle = color; ctx.textAlign = align; ctx.fillText(str, x, y);   // until the font loads
-    }
-    drawCenteredString(txt, x, y, font, color) {
-        if (this.px.text(ctx, txt, x, y, this.fontPx(font), color, "center")) return;
-        ctx.fillStyle = color; ctx.font = font; ctx.textAlign = "center"; ctx.fillText(txt, x, y);
-    }
+    txt(str, x, y, size, color, align = "left") { this.px.text(ctx, str, x, y, size, color, align); }
+    drawCenteredString(txt, x, y, font, color) { this.px.text(ctx, txt, x, y, this.fontPx(font), color, "center"); }
 
     drawElixirCost(x, y, val) {
         // The elixir badge with the cost on it, in the bitmap font.
-        if (this.px.draw(ctx, "elixir/badge", x, y, 24)) { this.px.textShadow(ctx, val, x, y + 5, 14, "#ffffff", "center"); return; }
-        ctx.font = "bold 16px 'Baloo 2', 'Segoe UI', sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.lineWidth = 3; ctx.lineJoin = "round";
-        ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.strokeText(val, x, y);
-        ctx.fillStyle = "#d11ad1"; ctx.fillText(val, x, y);
-        ctx.lineWidth = 1; ctx.lineJoin = "miter";
-        ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+        this.px.draw(ctx, "elixir/badge", x, y, 24);
+        this.px.textShadow(ctx, val, x, y + 5, 14, "#ffffff", "center");
     }
 
     drawRoundRect(x, y, w, h, r, fill, stroke) {
@@ -3328,12 +3248,7 @@ class Main {
             ctx.save();
             ctx.translate(p.x, p.y - arc);
             ctx.rotate(prog * 5 + 0.5);
-            if (this.px.draw(ctx, "projectiles/dynamite", 0, 0, 16)) { ctx.restore(); return; }
-            ctx.fillStyle = "#cc2b2b"; ctx.fillRect(-2.5, -6, 5, 12);       // red stick
-            ctx.strokeStyle = "#7a1414"; ctx.lineWidth = 1; ctx.strokeRect(-2.5, -6, 5, 12);
-            ctx.fillStyle = "#f0e3b0"; ctx.fillRect(-2.5, -6, 5, 2.5);       // pale cap
-            ctx.strokeStyle = "#444"; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(1.5, -10); ctx.stroke(); // fuse
-            ctx.fillStyle = "#ffcf3c"; ctx.beginPath(); ctx.arc(1.5, -10, 1.3, 0, Math.PI * 2); ctx.fill();   // spark
+            this.px.draw(ctx, "projectiles/dynamite", 0, 0, 16);
             ctx.restore();
             return;
         }

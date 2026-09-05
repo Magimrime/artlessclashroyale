@@ -1,7 +1,7 @@
 {
     "name": "artless-clash-royale",
     "productName": "Artless Clash Royale",
-    "version": "26.8.0",
+    "version": "26.8.1",
     "description": "An artless JavaScript port of Clash Royale — canvas graphics, real card game.",
     "author": "Oliver Zhou",
     "main": "desktop/main.js",
